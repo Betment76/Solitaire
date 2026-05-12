@@ -1,0 +1,17 @@
+OpenGameArt sound sources (used in this project):
+- https://opengameart.org/content/playing-card-sounds
+  Files adapted/reused: shuffle.wav, shuffleandbridge.wav, contact1.wav, contact2.wav, cut.wav
+
+Licensing:
+- The asset page indicates CC0 for this pack.
+- Optional credit mentioned by author: Brian MacIntosh.
+
+Project mapping:
+- card_slide.wav <- shuffle.wav
+- deal.wav <- shuffleandbridge.wav
+- card_tap.wav <- contact1.wav
+- hint.wav <- contact2.wav
+- to_foundation.wav <- cut.wav
+- deal_step.wav <- contact2.wav (temporary mapping)
+
+win.wav currently remains generated sound in-project.

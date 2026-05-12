@@ -1,0 +1,4 @@
+storePassword=
+keyPassword=
+keyAlias=solitaire
+storeFile=solitaire-release.jks
