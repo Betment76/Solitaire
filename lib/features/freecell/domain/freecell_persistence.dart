@@ -1,15 +1,13 @@
 import '../../../core/models/card.dart';
 import 'freecell_state.dart';
 
-/// Сохранённая партия и метаданные автодобора.
+/// Сохранённая партия и метаданные (отмены за партию).
 class FreecellLoadedGame {
   const FreecellLoadedGame(
     this.state, {
-    this.freeAutoFinishRemaining = 1,
     this.undoBudget = 5,
   });
   final FreecellState state;
-  final int freeAutoFinishRemaining;
   /// Бесплатные отмены за партию (добор через rewarded).
   final int undoBudget;
 }
@@ -23,7 +21,6 @@ class FreecellPersistence {
 
   static Map<String, dynamic> toMap(
     FreecellState state, {
-    int freeAutoFinishRemaining = 1,
     int undoBudget = 5,
   }) {
     return {
@@ -33,7 +30,6 @@ class FreecellPersistence {
         'moves': state.moves,
         'extraFreeCellSlots': state.extraFreeCellSlots,
         'freeExtraCellUnlockPending': state.freeExtraCellUnlockPending,
-        'freeAutoFinishRemaining': freeAutoFinishRemaining,
         'undoBudget': undoBudget,
         'tableau': state.tableau
             .map((pile) => pile.map(_cardToMap).toList())
@@ -63,7 +59,7 @@ class FreecellPersistence {
           const <String, dynamic>{};
       final extraSlots =
           (data['extraFreeCellSlots'] as int?)?.clamp(0, maxExtraFreeCells) ?? 0;
-      final freeAutoFinishRemaining = data['freeAutoFinishRemaining'] as int? ?? 1;
+      // freeAutoFinishRemaining в старых сейвах — игнорируем, автодобор без лимита.
       final undoBudget = (data['undoBudget'] as int?)?.clamp(0, 999) ?? 5;
       final pendingRaw = data['freeExtraCellUnlockPending'] as bool?;
       final legacyBadge = data['extraCellBadgeRemaining'] as int?;
@@ -105,7 +101,6 @@ class FreecellPersistence {
       if (result.tableau.length != 8) return null;
       return FreecellLoadedGame(
         result,
-        freeAutoFinishRemaining: freeAutoFinishRemaining,
         undoBudget: undoBudget,
       );
     } catch (_) {

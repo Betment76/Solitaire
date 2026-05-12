@@ -19,7 +19,6 @@ class FreecellController extends AsyncNotifier<FreecellState> {
   final List<FreecellState> _undo = <FreecellState>[];
   final List<FreecellState> _redo = <FreecellState>[];
 
-  int _freeAutoFinishRemaining = 1;
   /// Бесплатные отмены за партию (5), дальше — rewarded.
   int _undoBudget = 5;
 
@@ -35,11 +34,9 @@ class FreecellController extends AsyncNotifier<FreecellState> {
     _undo.clear();
     _redo.clear();
     if (restored != null) {
-      _freeAutoFinishRemaining = restored.freeAutoFinishRemaining;
       _undoBudget = restored.undoBudget;
       return restored.state;
     }
-    _freeAutoFinishRemaining = 1;
     _undoBudget = 5;
     return _engine.newGame(seed: DateTime.now().millisecondsSinceEpoch);
   }
@@ -52,7 +49,6 @@ class FreecellController extends AsyncNotifier<FreecellState> {
     final next = _engine.newGame(seed: DateTime.now().millisecondsSinceEpoch);
     _undo.clear();
     _redo.clear();
-    _freeAutoFinishRemaining = 1;
     _undoBudget = 5;
     state = AsyncData(next);
     await _persist(next);
@@ -86,8 +82,6 @@ class FreecellController extends AsyncNotifier<FreecellState> {
     );
     _apply(c, next);
   }
-
-  void grantAutoFinishFromReward() => _freeAutoFinishRemaining++;
 
   /// +1 отмена после просмотра рекламы.
   void grantUndoFromReward() => _undoBudget++;
@@ -183,19 +177,11 @@ class FreecellController extends AsyncNotifier<FreecellState> {
     final current = state.asData?.value;
     if (current == null) return;
     if (!_engine.canAutoFinish(current)) return;
-    if (_freeAutoFinishRemaining <= 0) return;
     final next = _engine.autoFinishAll(current);
-    _freeAutoFinishRemaining--;
     _apply(current, next);
   }
 
   bool canAutoFinish() {
-    final current = state.asData?.value;
-    if (current == null) return false;
-    return _engine.canAutoFinish(current) && _freeAutoFinishRemaining > 0;
-  }
-
-  bool engineAllowsAutoFinish() {
     final current = state.asData?.value;
     if (current == null) return false;
     return _engine.canAutoFinish(current);
@@ -217,7 +203,6 @@ class FreecellController extends AsyncNotifier<FreecellState> {
     await ref.read(localStoreProvider).saveFreecellState(
           FreecellPersistence.toMap(
             value,
-            freeAutoFinishRemaining: _freeAutoFinishRemaining,
             undoBudget: _undoBudget,
           ),
         );

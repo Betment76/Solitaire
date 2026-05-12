@@ -24,17 +24,35 @@ Widget metricWidget(String title, String value) {
   );
 }
 
-/// Круглая кнопка в верхней панели.
-Widget topCircleButton(IconData icon, VoidCallback onTap) {
+/// Цвет заливки верхних круглых кнопок — как у [bottomActionBar] (полупрозрачный зелёный).
+Color _gameTopBarButtonFill() =>
+    const Color(0xFF114C2F).withValues(alpha: 0.85);
+
+/// Золотистая обводка панелей и круглых кнопок в игре.
+Color get kGameTopBarGoldBorder => const Color(0xFFE8C547);
+
+/// Круглая кнопка в верхней панели (меню / стиль и т.п.): как нижнее меню + золотая рамка.
+Widget topCircleButton(
+  IconData icon,
+  VoidCallback onTap, {
+  Color? backgroundColor,
+  Color iconColor = Colors.white,
+  double iconSize = 24,
+  double tapPadding = 12,
+}) {
+  final fill = backgroundColor ?? _gameTopBarButtonFill();
   return Material(
-    color: const Color(0xFF0D5531).withValues(alpha: 0.95),
-    shape: const CircleBorder(),
+    color: fill,
+    shape: CircleBorder(
+      side: BorderSide(color: kGameTopBarGoldBorder, width: 1.5),
+    ),
+    clipBehavior: Clip.antiAlias,
     child: InkWell(
       customBorder: const CircleBorder(),
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Icon(icon, size: 20, color: Colors.white),
+        padding: EdgeInsets.all(tapPadding),
+        child: Icon(icon, size: iconSize, color: iconColor),
       ),
     ),
   );
@@ -116,7 +134,7 @@ Widget bottomAction(
   );
 }
 
-/// Нижняя панель с кнопками действий.
+/// Нижняя панель с кнопками действий (та же полупрозрачная заливка + золотая рамка).
 Widget bottomActionBar({
   required List<
           ({
@@ -134,6 +152,7 @@ Widget bottomActionBar({
     decoration: BoxDecoration(
       color: const Color(0xFF114C2F).withValues(alpha: 0.85),
       borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: kGameTopBarGoldBorder, width: 1.5),
     ),
     child: Row(
       children: [

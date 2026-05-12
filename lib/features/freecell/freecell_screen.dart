@@ -59,24 +59,10 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
     });
   }
 
-  /// Автофиниш: бесплатная попытка, затем rewarded (как в Косынке).
+  /// Автодобор в основания без рекламы (только если движок разрешает).
   Future<void> _onAutoFinishPressed() async {
-    final s = AppStrings.of(Localizations.localeOf(context));
-    if (_controller.canAutoFinish()) {
-      await _controller.autoFinishAll();
-      return;
-    }
-    if (!_controller.engineAllowsAutoFinish()) return;
-    final ok = await showYandexRewardedAd();
-    if (!mounted) return;
-    if (ok) {
-      _controller.grantAutoFinishFromReward();
-      await _controller.autoFinishAll();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.t('rewardAdFailed')), behavior: SnackBarBehavior.floating),
-      );
-    }
+    if (!_controller.canAutoFinish()) return;
+    await _controller.autoFinishAll();
   }
 
   /// До 4 доп. ячеек: первая без рекламы, остальные 3 — диалог и rewarded.
@@ -269,10 +255,7 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
                   (
                     icon: Icons.auto_fix_high,
                     label: s.t('autoFinish'),
-                    onTap: (_controller.canAutoFinish() ||
-                            _controller.engineAllowsAutoFinish())
-                        ? _onAutoFinishPressed
-                        : null,
+                    onTap: _controller.canAutoFinish() ? _onAutoFinishPressed : null,
                     badge: null,
                     badgePlay: false,
                   ),

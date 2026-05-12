@@ -264,21 +264,45 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
     }
   }
 
+  /// Отмена: 5 бесплатных за партию, дальше диалог и rewarded (как в Пауке, блок R-M-19262021-3).
+  Future<void> _onKlondikeUndo() async {
+    try {
+      if (_controller.canUndoWithBudget) {
+        ref.read(soundServiceProvider).play(SoundEvent.cardSlide);
+        await _controller.undo();
+        return;
+      }
+      if (!_controller.canUndo) return;
+      final s = AppStrings.of(Localizations.localeOf(context));
+      final watchAd = await showTableAdOfferDialog(
+        context,
+        title: s.t('undoRewardTitle'),
+        body: s.t('undoRewardBody'),
+        primaryLabel: s.t('hintRewardWatch'),
+        secondaryLabel: s.t('hintRewardDecline'),
+      );
+      if (!mounted) return;
+      if (watchAd != true) return;
+      final ok = await showYandexRewardedAd(placement: RewardedAdPlacement.klondikeUndo);
+      if (!mounted) return;
+      if (ok) {
+        _controller.grantUndoFromReward();
+        ref.read(soundServiceProvider).play(SoundEvent.cardSlide);
+        await _controller.undo();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(s.t('rewardAdFailed')), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } finally {
+      if (mounted) setState(() {});
+    }
+  }
+
+  /// Автодобор в основания без рекламы (только если движок разрешает).
   Future<void> _onAutoFinishPressed() async {
-    final s = AppStrings.of(Localizations.localeOf(context));
-    if (_controller.canAutoFinish()) {
-      await _controller.autoFinishAll();
-      return;
-    }
-    if (!_controller.engineAllowsAutoFinish()) return;
-    final ok = await showYandexRewardedAd();
-    if (!mounted) return;
-    if (ok) {
-      _controller.grantAutoFinishFromReward();
-      await _controller.autoFinishAll();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.t('rewardAdFailed')), behavior: SnackBarBehavior.floating));
-    }
+    if (!_controller.canAutoFinish()) return;
+    await _controller.autoFinishAll();
   }
 
   Future<void> _onNewGamePressed() async {
@@ -590,9 +614,7 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
                   (
                     icon: Icons.auto_fix_high,
                     label: s.t('autoFinish'),
-                    onTap: (_controller.canAutoFinish() || _controller.engineAllowsAutoFinish())
-                        ? _onAutoFinishPressed
-                        : null,
+                    onTap: _controller.canAutoFinish() ? _onAutoFinishPressed : null,
                     badge: null,
                     badgePlay: false,
                   ),
@@ -606,11 +628,14 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
                   (
                     icon: Icons.undo,
                     label: s.t('btnUndo'),
-                    onTap: _controller.canUndo
-                        ? () => _controller.undo()
-                        : null,
-                    badge: null,
-                    badgePlay: false,
+                    onTap: _controller.canUndo ? _onKlondikeUndo : null,
+                    badge: !_controller.canUndo
+                        ? null
+                        : (_controller.undoBudgetRemaining > 0
+                            ? _controller.undoBudgetRemaining
+                            : null),
+                    badgePlay:
+                        _controller.canUndo && _controller.undoBudgetRemaining == 0,
                   ),
                   (
                     icon: Icons.redo,

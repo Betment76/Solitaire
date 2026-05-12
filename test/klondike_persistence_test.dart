@@ -32,6 +32,7 @@ void main() {
 
     expect(restored, isNotNull);
     expect(restored!.dailyYmd, isNull);
+    expect(restored.undoBudget, 5);
     expect(restored.state.drawCount, 3);
     expect(restored.state.moves, 12);
     expect(restored.state.stock.length, 1);
@@ -56,5 +57,21 @@ void main() {
     final restored = KlondikePersistence.fromMap(map);
     expect(restored?.dailyYmd, ymd);
     expect(restored?.state.drawCount, 1);
+  });
+
+  test('undoBudget сохраняется в JSON сейва', () {
+    final source = KlondikeState(
+      stock: const [],
+      waste: const [],
+      drawCount: 1,
+      moves: 0,
+      foundations: {
+        for (final s in CardSuit.values) s: const <PlayingCard>[],
+      },
+      tableau: List.generate(7, (_) => const <PlayingCard>[]),
+    );
+    final map = KlondikePersistence.toMap(source, undoBudget: 2);
+    final restored = KlondikePersistence.fromMap(map);
+    expect(restored?.undoBudget, 2);
   });
 }

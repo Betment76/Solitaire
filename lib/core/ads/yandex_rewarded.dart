@@ -12,6 +12,12 @@ const String _kKlondikeHintId = String.fromEnvironment(
   defaultValue: 'R-M-19262021-2',
 );
 
+/// Отмена в Косынке — `--dart-define=YANDEX_REWARDED_KLONDIKE_UNDO_ID=...`
+const String _kKlondikeUndoId = String.fromEnvironment(
+  'YANDEX_REWARDED_KLONDIKE_UNDO_ID',
+  defaultValue: 'R-M-19262021-3',
+);
+
 /// Отмена хода в Пауке — `--dart-define=YANDEX_REWARDED_SPIDER_UNDO_ID=...`
 const String _kSpiderUndoId = String.fromEnvironment(
   'YANDEX_REWARDED_SPIDER_UNDO_ID',
@@ -38,6 +44,7 @@ enum RewardedAdPlacement {
   /// Автофиниш, +ячейка FreeCell, daily retry и пр.
   generic,
   klondikeHint,
+  klondikeUndo,
   spiderUndo,
   spiderHint,
   freecellUndo,
@@ -48,6 +55,7 @@ String effectiveRewardedAdUnitId([RewardedAdPlacement placement = RewardedAdPlac
   final raw = switch (placement) {
     RewardedAdPlacement.generic => _kRewardedEnv,
     RewardedAdPlacement.klondikeHint => _kKlondikeHintId,
+    RewardedAdPlacement.klondikeUndo => _kKlondikeUndoId,
     RewardedAdPlacement.spiderUndo => _kSpiderUndoId,
     RewardedAdPlacement.spiderHint =>
       _kSpiderHintId.isNotEmpty ? _kSpiderHintId : _kRewardedEnv,

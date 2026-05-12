@@ -24,11 +24,12 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
   /// Дата `YYYY-MM-DD` активной ежедневной партии (для рекорда по ходам).
   String? _dailySessionYmd;
 
-  /// Лимиты «бесплатно за партию»; добор через rewarded — см. grant*FromReward.
+  /// Лимиты «бесплатно за партию»; добор подсказок через rewarded — см. grantHintFromReward.
   int _freeHintsRemaining = 3;
-  int _freeAutoFinishRemaining = 1;
   /// Вторая попытка ежедневного челленджа за рекламу (один раз за сессию дня).
   bool _dailyRewardRetryUsed = false;
+  /// Бесплатные отмены за партию (5), дальше — rewarded как в Пауке.
+  int _undoBudget = 5;
 
   bool get isDailySession => _dailySessionYmd != null;
   bool get canOfferDailyRetryAd {
@@ -41,10 +42,11 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
   bool get canUseFreeHint => _freeHintsRemaining > 0;
   /// Оставшиеся бесплатные подсказки (добор через рекламу увеличивает счётчик).
   int get freeHintsRemaining => _freeHintsRemaining;
-  bool get canUseFreeAutoFinish => _freeAutoFinishRemaining > 0;
 
   bool get canUndo => _undo.isNotEmpty;
   bool get canRedo => _redo.isNotEmpty;
+  bool get canUndoWithBudget => canUndo && _undoBudget > 0;
+  int get undoBudgetRemaining => _undoBudget;
   int get drawCount => _drawCount;
 
   int _drawCountFromSettings() {
@@ -64,13 +66,13 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
       _drawCount = restored.state.drawCount;
       _dailySessionYmd = restored.dailyYmd;
       _freeHintsRemaining = restored.freeHintsRemaining;
-      _freeAutoFinishRemaining = restored.freeAutoFinishRemaining;
       _dailyRewardRetryUsed = restored.dailyRewardRetryUsed;
+      _undoBudget = restored.undoBudget;
       return restored.state;
     }
     _freeHintsRemaining = 3;
-    _freeAutoFinishRemaining = 1;
     _dailyRewardRetryUsed = false;
+    _undoBudget = 5;
     _drawCount = _drawCountFromSettings();
     return _engine.newGame(drawCount: _drawCount, seed: DateTime.now().millisecondsSinceEpoch);
   }
@@ -78,8 +80,8 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
   Future<void> newGame({int? drawCount}) async {
     _dailySessionYmd = null;
     _freeHintsRemaining = 3;
-    _freeAutoFinishRemaining = 1;
     _dailyRewardRetryUsed = false;
+    _undoBudget = 5;
     final cur = state.asData?.value;
     if (cur != null && !cur.isWin) {
       unawaited(ref.read(statsProvider.notifier).recordGameAbandoned());
@@ -102,8 +104,8 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
     }
     _dailySessionYmd = _todayYmd();
     _freeHintsRemaining = 3;
-    _freeAutoFinishRemaining = 1;
     _dailyRewardRetryUsed = false;
+    _undoBudget = 5;
     _drawCount = _drawCountFromSettings();
     final seed = klondikeDailySeed(_dailySessionYmd!);
     final next = _engine.newGame(drawCount: _drawCount, seed: seed);
@@ -122,8 +124,8 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
       unawaited(ref.read(statsProvider.notifier).recordGameAbandoned());
     }
     _freeHintsRemaining = 3;
-    _freeAutoFinishRemaining = 1;
     _dailyRewardRetryUsed = true;
+    _undoBudget = 5;
     _drawCount = _drawCountFromSettings();
     final seed = klondikeDailySeed(_dailySessionYmd!);
     final next = _engine.newGame(drawCount: _drawCount, seed: seed);
@@ -136,7 +138,7 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
 
   void grantHintFromReward() => _freeHintsRemaining++;
 
-  void grantAutoFinishFromReward() => _freeAutoFinishRemaining++;
+  void grantUndoFromReward() => _undoBudget++;
 
   /// Подсказка: бесплатные попытки или нужна реклама (`needsReward`).
   ({String? tag, bool needsReward, bool noMoves}) takeHintOrPrepareReward() {
@@ -158,6 +160,8 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
   Future<void> undo() async {
     final current = state.asData?.value;
     if (current == null || _undo.isEmpty) return;
+    if (_undoBudget <= 0) return;
+    _undoBudget--;
     final prev = _undo.removeLast();
     _redo.add(current);
     state = AsyncData(prev);
@@ -247,9 +251,7 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
     final current = state.asData?.value;
     if (current == null) return;
     if (!_engine.canAutoFinish(current)) return;
-    if (_freeAutoFinishRemaining <= 0) return;
     final next = _engine.autoFinishAll(current);
-    _freeAutoFinishRemaining--;
     _apply(current, next);
   }
 
@@ -260,13 +262,6 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
   }
 
   bool canAutoFinish() {
-    final current = state.asData?.value;
-    if (current == null) return false;
-    return _engine.canAutoFinish(current) && _freeAutoFinishRemaining > 0;
-  }
-
-  /// Движок допускает автодобор (без учёта лимита rewarded).
-  bool engineAllowsAutoFinish() {
     final current = state.asData?.value;
     if (current == null) return false;
     return _engine.canAutoFinish(current);
@@ -304,8 +299,8 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
             value,
             dailyYmd: _dailySessionYmd,
             freeHintsRemaining: _freeHintsRemaining,
-            freeAutoFinishRemaining: _freeAutoFinishRemaining,
             dailyRewardRetryUsed: _dailyRewardRetryUsed,
+            undoBudget: _undoBudget,
           ),
         );
   }

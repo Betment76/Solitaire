@@ -7,18 +7,18 @@ class KlondikeLoadedGame {
     this.state,
     this.dailyYmd, {
     this.freeHintsRemaining = 3,
-    this.freeAutoFinishRemaining = 1,
     this.dailyRewardRetryUsed = false,
+    this.undoBudget = 5,
   });
   final KlondikeState state;
   /// Дата `YYYY-MM-DD` ежедневной раздачи, если партия шла в режиме Daily.
   final String? dailyYmd;
   /// Бесплатные подсказки за текущую партию.
   final int freeHintsRemaining;
-  /// Оставшиеся бесплатные автодоборы за партию.
-  final int freeAutoFinishRemaining;
   /// Использована ли вторая попытка ежедневного челленджа за рекламу.
   final bool dailyRewardRetryUsed;
+  /// Бесплатные отмены за партию (добор через rewarded).
+  final int undoBudget;
 }
 
 /// Сериализация состояния Косынки для локального сохранения.
@@ -30,16 +30,16 @@ class KlondikePersistence {
     KlondikeState state, {
     String? dailyYmd,
     int freeHintsRemaining = 3,
-    int freeAutoFinishRemaining = 1,
     bool dailyRewardRetryUsed = false,
+    int undoBudget = 5,
   }) {
     return {
       'version': _schemaVersion,
       'mode': _mode,
       if (dailyYmd != null) 'dailyYmd': dailyYmd,
       'freeHintsRemaining': freeHintsRemaining,
-      'freeAutoFinishRemaining': freeAutoFinishRemaining,
       'dailyRewardRetryUsed': dailyRewardRetryUsed,
+      'undoBudget': undoBudget,
       'payload': {
         'drawCount': state.drawCount,
         'moves': state.moves,
@@ -62,8 +62,8 @@ class KlondikePersistence {
       final data = payloadRaw is Map<String, dynamic> ? payloadRaw : raw;
       final dailyYmd = raw['dailyYmd'] as String?;
       final freeHintsRemaining = raw['freeHintsRemaining'] as int? ?? 3;
-      final freeAutoFinishRemaining = raw['freeAutoFinishRemaining'] as int? ?? 1;
       final dailyRewardRetryUsed = raw['dailyRewardRetryUsed'] as bool? ?? false;
+      final undoBudget = (raw['undoBudget'] as int?)?.clamp(0, 999) ?? 5;
 
       final foundationsRaw = (data['foundations'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
       final tableauRaw = (data['tableau'] as List<dynamic>?) ?? const <dynamic>[];
@@ -86,8 +86,8 @@ class KlondikePersistence {
         state,
         dailyYmd,
         freeHintsRemaining: freeHintsRemaining,
-        freeAutoFinishRemaining: freeAutoFinishRemaining,
         dailyRewardRetryUsed: dailyRewardRetryUsed,
+        undoBudget: undoBudget,
       );
     } catch (_) {
       return null;
