@@ -48,6 +48,7 @@ class SpiderController extends AsyncNotifier<SpiderState> {
       _undoBudget = restored.undoBudget;
       _usedUndo = false;
       _freeHintsRemaining = restored.freeHintsRemaining;
+      _currentSuitCount = restored.suitCount;
       return restored.state;
     }
     _undoBudget = 5;
@@ -206,6 +207,7 @@ class SpiderController extends AsyncNotifier<SpiderState> {
             value,
             undoBudget: _undoBudget,
             freeHintsRemaining: _freeHintsRemaining,
+            suitCount: _currentSuitCount,
           ),
         );
   }

@@ -204,8 +204,9 @@ class FreecellEngine {
     final fromPile = state.tableau[fromCol];
     if (fromPile.isEmpty) return state;
     final moving = fromPile.last;
-    if (!_canMoveToFoundation(moving, state.foundations[moving.suit]!))
+    if (!_canMoveToFoundation(moving, state.foundations[moving.suit]!)) {
       return state;
+    }
 
     final nextTableau = _cloneTableau(state.tableau);
     nextTableau[fromCol].removeLast();
@@ -223,8 +224,9 @@ class FreecellEngine {
     if (cellIndex < 0 || cellIndex >= state.freeCells.length) return state;
     final moving = state.freeCells[cellIndex];
     if (moving == null) return state;
-    if (!_canMoveToFoundation(moving, state.foundations[moving.suit]!))
+    if (!_canMoveToFoundation(moving, state.foundations[moving.suit]!)) {
       return state;
+    }
 
     final nextCells = [...state.freeCells];
     nextCells[cellIndex] = null;
@@ -281,67 +283,46 @@ class FreecellEngine {
     return cells;
   }
 
-  /// Даёт подсказку: возвращает описание лучшего хода или null.
-  /// Приоритет: ход в foundation > разблокировка самой большой карты > создание пустой колонки.
-  /// Возвращает строку вида "Перенесите ♥A из колонки 3 в foundation" или null.
+  /// Подсказка: машинный тег хода (перевод — на экране через AppStrings).
+  /// Приоритет: ход в foundation > ход на tableau > запасная ячейка.
+  /// Теги: `fc_tableau_to_foundation_{col}`, `fc_cell_to_foundation_{cell}`,
+  /// `fc_tableau_to_tableau_{from}_{to}`, `fc_tableau_to_cell_{col}_{cell}`.
   String? hint(FreecellState state) {
     if (state.isWin) return null;
-
-    // 1. Ход в foundation
+    // 1. Ход в foundation: из колонок, затем из ячеек.
     for (var c = 0; c < state.tableau.length; c++) {
       final pile = state.tableau[c];
       if (pile.isEmpty) continue;
       if (_canMoveToFoundation(pile.last, state.foundations[pile.last.suit]!)) {
-        return 'Перенесите ${_cardName(pile.last)} из колонки ${c + 1} в foundation';
+        return 'fc_tableau_to_foundation_$c';
       }
     }
     for (var i = 0; i < state.freeCells.length; i++) {
       final card = state.freeCells[i];
       if (card == null) continue;
       if (_canMoveToFoundation(card, state.foundations[card.suit]!)) {
-        return 'Перенесите ${_cardName(card)} из ячейки ${i + 1} в foundation';
+        return 'fc_cell_to_foundation_$i';
       }
     }
-
-    // 2. Поиск разблокировки самой большой закрытой карты
-    // Сначала ищем карты, которые можно переместить на пустую колонку
-    final emptyCols = <int>[];
-    for (var c = 0; c < state.tableau.length; c++) {
-      if (state.tableau[c].isEmpty) emptyCols.add(c);
-    }
-
-    // 3. Ход на tableau: ищем карту, которую можно куда-то положить
+    // 2. Ход на tableau: ищем карту, которую можно куда-то положить.
     for (var c = 0; c < state.tableau.length; c++) {
       final pile = state.tableau[c];
       if (pile.isEmpty) continue;
       final targets = getLegalTableauTargets(state, c);
       if (targets.isNotEmpty) {
-        return 'Перенесите ${_cardName(pile.last)} из колонки ${c + 1} в колонку ${targets.first + 1}';
+        return 'fc_tableau_to_tableau_${c}_${targets.first}';
       }
     }
-
-    // 4. Ход в свободную ячейку
+    // 3. Запасная свободная ячейка.
     final emptyCells = getEmptyFreeCells(state);
     if (emptyCells.isNotEmpty) {
       for (var c = 0; c < state.tableau.length; c++) {
         if (state.tableau[c].isNotEmpty) {
-          return 'Положите ${_cardName(state.tableau[c].last)} из колонки ${c + 1} в ячейку ${emptyCells.first + 1}';
+          return 'fc_tableau_to_cell_${c}_${emptyCells.first}';
         }
       }
     }
-
     return null;
-  }
-
-  String _cardName(PlayingCard card) {
-    const ranks = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-    const suits = {
-      CardSuit.hearts: '♥',
-      CardSuit.diamonds: '♦',
-      CardSuit.clubs: '♣',
-      CardSuit.spades: '♠',
-    };
-    return '${ranks[card.rank]}${suits[card.suit]}';
   }
 
   /// Проверяет, есть ли хотя бы один ход в foundation.

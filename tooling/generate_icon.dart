@@ -1,28 +1,31 @@
 // Generates a 1024x1024 app icon for Solitaire (Ace of Spades on green felt)
 // Run: dart tooling/generate_icon.dart
-// Dependencies: image (added to pubspec.yaml)
+// Dependencies: image (dev_dependencies в pubspec.yaml)
+
+// CLI-инструмент: вывод в консоль через print намеренно.
+// ignore_for_file: avoid_print
 
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:image/image.dart' as img;
 
-const int SIZE = 1024;
+const int iconSize = 1024;
 
 void main() {
-  final image = img.Image(width: SIZE, height: SIZE);
-  final cx = SIZE / 2, cy = SIZE / 2;
-  final cardW = SIZE * 0.70, cardH = SIZE * 0.88;
+  final image = img.Image(width: iconSize, height: iconSize);
+  final cx = iconSize / 2, cy = iconSize / 2;
+  final cardW = iconSize * 0.70, cardH = iconSize * 0.88;
   final cardX = cx - cardW / 2, cardY = cy - cardH / 2;
-  final cornerRadius = SIZE * 0.055;
+  final cornerRadius = iconSize * 0.055;
 
-  for (int y = 0; y < SIZE; y++) {
-    for (int x = 0; x < SIZE; x++) {
+  for (int y = 0; y < iconSize; y++) {
+    for (int x = 0; x < iconSize; x++) {
       // Determine pixel color with anti-aliasing
       final isInside = _roundedRectContains(x, y, cardX, cardY, cardW, cardH, cornerRadius);
-      
+
       if (!isInside) {
         // Green felt background with slight gradient
-        final bg = _greenFelt(x, y, SIZE);
+        final bg = _greenFelt(x, y, iconSize);
         image.setPixelRgba(x, y, bg[0], bg[1], bg[2], 255);
         continue;
       }
@@ -156,24 +159,35 @@ double _minDistToRoundedRect(int x, int y, double rx, double ry, double w, doubl
 
   double dx = 0, dy = 0;
 
-  if (x < left) dx = left - x;
-  else if (x > right) dx = x - right;
-  else if (inLeft && inTop) { dx = (left + r) - x; dy = (top + r) - y; }
-  else if (inLeft && inBot) { dx = (left + r) - x; dy = (bottom - r) - y; }
-  else if (inRight && inTop) { dx = x - (right - r); dy = (top + r) - y; }
-  else if (inRight && inBot) { dx = x - (right - r); dy = (bottom - r) - y; }
+  if (x < left) {
+    dx = left - x;
+  } else if (x > right) {
+    dx = x - right;
+  } else if (inLeft && inTop) {
+    dx = (left + r) - x; dy = (top + r) - y;
+  } else if (inLeft && inBot) {
+    dx = (left + r) - x; dy = (bottom - r) - y;
+  } else if (inRight && inTop) {
+    dx = x - (right - r); dy = (top + r) - y;
+  } else if (inRight && inBot) {
+    dx = x - (right - r); dy = (bottom - r) - y;
+  }
 
   if (dx == 0 && dy == 0) {
-    if (x < left + r) dx = left + r - x;
-    else if (x > right - r) dx = x - (right - r);
-    if (y < top + r) dy = top + r - y;
-    else if (y > bottom - r) dy = y - (bottom - r);
+    if (x < left + r) {
+      dx = left + r - x;
+    } else if (x > right - r) {
+      dx = x - (right - r);
+    }
+    if (y < top + r) {
+      dy = top + r - y;
+    } else if (y > bottom - r) {
+      dy = y - (bottom - r);
+    }
   }
 
   return math.sqrt(dx * dx + dy * dy);
 }
-
-int _clamp(int v, int min, int max) => v < min ? min : (v > max ? max : v);
 
 List<int> _greenFelt(int x, int y, int size) {
   final center = size / 2;

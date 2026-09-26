@@ -120,12 +120,15 @@ class FreecellPersistence {
   }
 
   static PlayingCard _cardFromMap(Map<String, dynamic> m) {
+    final suitName = m['suit'] as String?;
+    final rank = m['rank'] as int?;
+    // Некорректная масть или ранг — битый сейв: бросаем, чтобы загрузка вернула null.
+    if (suitName == null || rank == null || rank < 1 || rank > 13) {
+      throw const FormatException('Invalid card in save');
+    }
     return PlayingCard(
-      suit: CardSuit.values.firstWhere(
-        (s) => s.name == m['suit'],
-        orElse: () => CardSuit.spades,
-      ),
-      rank: m['rank'] as int? ?? 1,
+      suit: CardSuit.values.firstWhere((s) => s.name == suitName),
+      rank: rank,
       faceUp: m['faceUp'] as bool? ?? false,
     );
   }

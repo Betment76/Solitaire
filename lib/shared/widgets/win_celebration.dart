@@ -31,7 +31,6 @@ class _WinCelebrationState extends State<WinCelebration>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   final _particles = <_Particle>[];
-  int _frame = 0;
 
   @override
   void initState() {
@@ -58,8 +57,7 @@ class _WinCelebrationState extends State<WinCelebration>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 4),
-    )..addListener(() => setState(() => _frame++));
-    _controller.repeat();
+    )..repeat();
   }
 
   @override
@@ -92,9 +90,13 @@ class _WinCelebrationState extends State<WinCelebration>
     return Stack(
       children: [
         Container(color: Colors.black.withValues(alpha: 0.6)),
-        CustomPaint(
-          size: size,
-          painter: _ConfettiPainter(_particles, _controller.value),
+        // Конфетти анимируются изолированно: статичный контент не пересобирается каждый кадр.
+        AnimatedBuilder(
+          animation: _controller,
+          builder: (context, _) => CustomPaint(
+            size: size,
+            painter: _ConfettiPainter(_particles, _controller.value),
+          ),
         ),
         Center(
           child: Column(

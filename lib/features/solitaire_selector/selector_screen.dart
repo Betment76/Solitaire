@@ -42,6 +42,7 @@ class _SelectorScreenState extends ConsumerState<SelectorScreen> {
     // Свежая проверка сейва (не закэшированный null после прошлого захода).
     ref.invalidate(hasSavedGameProvider);
     final saved = await ref.read(hasSavedGameProvider.future);
+    if (!mounted) return;
     final targetingSame = saved?.route == route;
     if (targetingSame) {
       final s = AppStrings.of(Localizations.localeOf(context));

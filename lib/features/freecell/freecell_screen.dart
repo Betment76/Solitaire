@@ -187,13 +187,14 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
     }
   }
 
-  /// Показать подсказку в SnackBar.
+  /// Показать подсказку в SnackBar (тег движка → локализованный текст).
   void _onHintPressed() {
-    final hint = _controller.hint();
-    if (hint == null) {
+    final s = AppStrings.of(Localizations.localeOf(context));
+    final tag = _controller.hint();
+    if (tag == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Нет доступных ходов'),
+          content: Text(s.t('hintNone')),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
         ),
@@ -202,12 +203,58 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(hint),
+        content: Text(_hintMessage(s, tag)),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 3),
       ),
     );
   }
+
+  /// Тег подсказки из движка → локализованный текст с именем карты.
+  String _hintMessage(AppStrings s, String tag) {
+    final st = _state;
+    if (tag.startsWith('fc_tableau_to_foundation_')) {
+      final col = int.tryParse(tag.substring('fc_tableau_to_foundation_'.length));
+      if (col == null || col >= st.tableau.length || st.tableau[col].isEmpty) {
+        return s.t('hintNone');
+      }
+      return s.t('hintFcToFoundation')
+          .replaceAll('{card}', _cardName(st.tableau[col].last))
+          .replaceAll('{n}', '${col + 1}');
+    }
+    if (tag.startsWith('fc_cell_to_foundation_')) {
+      final cell = int.tryParse(tag.substring('fc_cell_to_foundation_'.length));
+      if (cell == null || cell >= st.freeCells.length) return s.t('hintNone');
+      final card = st.freeCells[cell];
+      if (card == null) return s.t('hintNone');
+      return s.t('hintFcCellToFoundation')
+          .replaceAll('{card}', _cardName(card))
+          .replaceAll('{n}', '${cell + 1}');
+    }
+    final toTableau = RegExp(r'^fc_tableau_to_tableau_(\d+)_(\d+)$').firstMatch(tag);
+    if (toTableau != null) {
+      final from = int.parse(toTableau.group(1)!);
+      final to = int.parse(toTableau.group(2)!);
+      if (from >= st.tableau.length || st.tableau[from].isEmpty) return s.t('hintNone');
+      return s.t('hintFcToColumn')
+          .replaceAll('{card}', _cardName(st.tableau[from].last))
+          .replaceAll('{from}', '${from + 1}')
+          .replaceAll('{to}', '${to + 1}');
+    }
+    final toCell = RegExp(r'^fc_tableau_to_cell_(\d+)_(\d+)$').firstMatch(tag);
+    if (toCell != null) {
+      final col = int.parse(toCell.group(1)!);
+      final cell = int.parse(toCell.group(2)!);
+      if (col >= st.tableau.length || st.tableau[col].isEmpty) return s.t('hintNone');
+      return s.t('hintFcToCell')
+          .replaceAll('{card}', _cardName(st.tableau[col].last))
+          .replaceAll('{n}', '${cell + 1}');
+    }
+    return s.t('hintNone');
+  }
+
+  /// Имя карты для текста подсказки, например `10♥`.
+  String _cardName(PlayingCard c) => '${_rank(c.rank)}${_suit(c.suit)}';
 
   /// Отмена: 5 бесплатных за партию, дальше диалог и rewarded (как в Пауке).
   Future<void> _onFreecellUndo() async {
@@ -383,7 +430,7 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
                   ),
                   (
                     icon: Icons.lightbulb_outline,
-                    label: 'Подсказка',
+                    label: s.t('hint'),
                     onTap: _onHintPressed,
                     badge: null,
                     badgePlay: false,
@@ -578,10 +625,12 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
       onAcceptWithDetails: (details) {
         ref.read(soundServiceProvider).play(SoundEvent.cardToFoundation);
         final p = details.data;
-        if (p.source == _FcSource.tableau)
+        if (p.source == _FcSource.tableau) {
           _controller.moveTableauToFoundation(p.fromColumn!);
-        if (p.source == _FcSource.freeCell)
+        }
+        if (p.source == _FcSource.freeCell) {
           _controller.moveFreeCellToFoundation(p.fromCell!);
+        }
         _triggerDropPulseFoundation(suit.name);
       },
       builder: (context, candidate, rejected) {
@@ -637,19 +686,23 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
       onWillAcceptWithDetails: (details) {
         final p = details.data;
         var ok = false;
-        if (p.source == _FcSource.tableau)
+        if (p.source == _FcSource.tableau) {
           ok = _controller.canMoveTableauToTableau(p.fromColumn!, column, fromCardIndex: p.fromCardIndex);
-        if (p.source == _FcSource.freeCell)
+        }
+        if (p.source == _FcSource.freeCell) {
           ok = _controller.canMoveFreeCellToTableau(p.fromCell!, column);
+        }
         return ok;
       },
       onAcceptWithDetails: (details) {
         ref.read(soundServiceProvider).play(SoundEvent.cardSlide);
         final p = details.data;
-        if (p.source == _FcSource.tableau)
+        if (p.source == _FcSource.tableau) {
           _controller.moveTableauToTableau(p.fromColumn!, column, fromCardIndex: p.fromCardIndex);
-        if (p.source == _FcSource.freeCell)
+        }
+        if (p.source == _FcSource.freeCell) {
           _controller.moveFreeCellToTableau(p.fromCell!, column);
+        }
       },
       builder: (context, candidate, rejected) {
         final columnBody = GestureDetector(

@@ -75,8 +75,8 @@ String effectiveRewardedAdUnitId([RewardedAdPlacement placement = RewardedAdPlac
 Future<bool> showYandexRewardedAd({
   RewardedAdPlacement placement = RewardedAdPlacement.generic,
 }) async {
+  final loader = RewardedAdLoader();
   try {
-    final loader = RewardedAdLoader();
     final ad = await loader.loadAd(
       adRequest: AdRequest(adUnitId: effectiveRewardedAdUnitId(placement)),
     );
@@ -94,5 +94,8 @@ Future<bool> showYandexRewardedAd({
       debugPrint('Rewarded ad error: $e\n$st');
     }
     return false;
+  } finally {
+    // Освобождаем нативные ресурсы лоадера, иначе они утекают за сессию.
+    loader.destroy();
   }
 }

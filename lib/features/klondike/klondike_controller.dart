@@ -70,11 +70,13 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
       _freeHintsRemaining = restored.freeHintsRemaining;
       _dailyRewardRetryUsed = restored.dailyRewardRetryUsed;
       _undoBudget = restored.undoBudget;
+      _usedUndo = false;
       return restored.state;
     }
     _freeHintsRemaining = 3;
     _dailyRewardRetryUsed = false;
     _undoBudget = 5;
+    _usedUndo = false;
     _drawCount = _drawCountFromSettings();
     return _engine.newGame(drawCount: _drawCount, seed: DateTime.now().millisecondsSinceEpoch);
   }
@@ -84,6 +86,7 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
     _freeHintsRemaining = 3;
     _dailyRewardRetryUsed = false;
     _undoBudget = 5;
+    _usedUndo = false;
     final cur = state.asData?.value;
     if (cur != null && !cur.isWin) {
       unawaited(ref.read(statsProvider.notifier).recordGameAbandoned());
@@ -108,6 +111,7 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
     _freeHintsRemaining = 3;
     _dailyRewardRetryUsed = false;
     _undoBudget = 5;
+    _usedUndo = false;
     _drawCount = _drawCountFromSettings();
     final seed = klondikeDailySeed(_dailySessionYmd!);
     final next = _engine.newGame(drawCount: _drawCount, seed: seed);
@@ -128,6 +132,7 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
     _freeHintsRemaining = 3;
     _dailyRewardRetryUsed = true;
     _undoBudget = 5;
+    _usedUndo = false;
     _drawCount = _drawCountFromSettings();
     final seed = klondikeDailySeed(_dailySessionYmd!);
     final next = _engine.newGame(drawCount: _drawCount, seed: seed);

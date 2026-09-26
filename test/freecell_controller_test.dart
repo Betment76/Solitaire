@@ -1,8 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:solitaire/core/models/card.dart';
-import 'package:solitaire/features/freecell/domain/freecell_state.dart';
 import 'package:solitaire/features/freecell/freecell_controller.dart';
 
 void main() {
@@ -86,7 +84,7 @@ void main() {
 
       final h = controller.hint();
       // Hint should not throw
-      expect(h is String? || h == null, isTrue);
+      expect(h, anyOf(isNull, isA<String>()));
     });
 
     test('addExtraFreeCellSlotFree добавляет ячейку', () async {

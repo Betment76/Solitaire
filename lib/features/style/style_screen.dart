@@ -60,10 +60,10 @@ class _StyleScreenState extends ConsumerState<StyleScreen> {
                     topCircleButton(Icons.close_rounded, () => Navigator.pop(context)),
                     const SizedBox(width: 10),
                     Text(
-                      'персональные настройки',
+                      s.t('stylePersonalTitle'),
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 30 / 2,
+                        fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -107,9 +107,9 @@ class _StyleScreenState extends ConsumerState<StyleScreen> {
                     else if (_tabIndex == 2)
                       _faceChoices(data, save, s)
                     else
-                      const Text(
-                        'Скоро: эффекты и анимации',
-                        style: TextStyle(
+                      Text(
+                        s.t('styleEffectsSoon'),
+                        style: const TextStyle(
                           color: Color(0xFF525252),
                           fontWeight: FontWeight.w600,
                         ),
@@ -250,7 +250,7 @@ class _StyleScreenState extends ConsumerState<StyleScreen> {
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: SizedBox(
         width: 92,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

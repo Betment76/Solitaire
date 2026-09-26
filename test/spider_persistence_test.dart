@@ -18,15 +18,41 @@ void main() {
       ),
     );
 
-    final map = SpiderPersistence.toMap(source, undoBudget: 2, freeHintsRemaining: 1);
+    final map = SpiderPersistence.toMap(source, undoBudget: 2, freeHintsRemaining: 1, suitCount: 4);
     final restored = SpiderPersistence.fromMap(map);
 
     expect(restored, isNotNull);
     expect(restored!.undoBudget, 2);
     expect(restored.freeHintsRemaining, 1);
+    expect(restored.suitCount, 4);
     expect(restored.state.moves, 5);
     expect(restored.state.completedSequences, 1);
     expect(restored.state.tableau.length, 10);
     expect(restored.state.tableau[0].length, 1);
+  });
+
+  test('сейв без suitCount (старая версия) читается как партия в 1 масть', () {
+    final source = SpiderState(
+      stock: const [],
+      tableau: List.generate(10, (i) => const <PlayingCard>[]),
+    );
+    final map = SpiderPersistence.toMap(source)..remove('suitCount');
+    final restored = SpiderPersistence.fromMap(map);
+    expect(restored, isNotNull);
+    expect(restored!.suitCount, 1);
+  });
+
+  test('битый сейв с неизвестной мастью возвращает null', () {
+    final source = SpiderState(
+      stock: const [],
+      tableau: List.generate(10, (i) => const <PlayingCard>[]),
+    );
+    final map = SpiderPersistence.toMap(source);
+    // Подменяем карту на несуществующую масть.
+    (map['payload'] as Map<String, dynamic>)['stock'] = [
+      {'suit': 'unknown_suit', 'rank': 5, 'faceUp': false},
+    ];
+    final restored = SpiderPersistence.fromMap(map);
+    expect(restored, isNull);
   });
 }
