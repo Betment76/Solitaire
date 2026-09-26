@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/l10n/app_strings.dart';
 import '../../core/app_table_background.dart';
 import '../../core/providers.dart';
+import '../../core/store/store_update.dart';
 
 String _formatDailyTime(int seconds) {
   final m = (seconds ~/ 60).toString().padLeft(2, '0');
@@ -29,6 +32,16 @@ class _SelectorScreenState extends ConsumerState<SelectorScreen> {
       end: Alignment.bottomCenter,
     ),
   );
+
+  @override
+  void initState() {
+    super.initState();
+    // Проверка обновления в магазине (RuStore / Google Play) — раз за сессию.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(promptStoreUpdateIfAvailable());
+    });
+  }
 
   /// Открыть игровой экран и обновить кэш «есть сейв» после возврата в меню.
   Future<void> _openGameRoute(String route) async {

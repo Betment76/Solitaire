@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_table_background.dart';
+import '../../core/store/store_review.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/models/app_settings.dart';
 import '../../core/providers.dart';
@@ -128,6 +131,11 @@ class SettingsScreen extends ConsumerWidget {
                 },
               ),
               const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.star_rate_outlined),
+                title: Text(s.t('rateApp')),
+                onTap: () => unawaited(requestStoreReview()),
+              ),
               ListTile(
                 leading: const Icon(Icons.privacy_tip_outlined),
                 title: Text(s.t('privacyPolicy')),

@@ -61,7 +61,8 @@ flutter pub get
 ### Запуск
 
 ```bash
-flutter run
+flutter run --flavor rustore
+# Google Play: flutter run --flavor gplay --dart-define=STORE=gplay
 ```
 
 ## Проверки качества

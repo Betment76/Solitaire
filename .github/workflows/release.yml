@@ -14,7 +14,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.29.x'
+          flutter-version: '3.44.x'
           channel: 'stable'
 
       - name: Install dependencies
@@ -23,23 +23,32 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      - name: Build APK
-        run: flutter build apk --release
+      - name: Build APK (RuStore)
+        run: flutter build apk --release --flavor rustore
 
-      - name: Build AppBundle
-        run: flutter build appbundle --release
+      - name: Build AppBundle (RuStore)
+        run: flutter build appbundle --release --flavor rustore
 
-      - name: Upload APK
+      - name: Build AppBundle (Google Play)
+        run: flutter build appbundle --release --flavor gplay --dart-define=STORE=gplay
+
+      - name: Upload APK (RuStore)
         uses: actions/upload-artifact@v4
         with:
-          name: apk-release
-          path: build/app/outputs/flutter-apk/*.apk
+          name: apk-rustore-release
+          path: build/app/outputs/flutter-apk/app-rustore-release.apk
 
-      - name: Upload AppBundle
+      - name: Upload AppBundle (RuStore)
         uses: actions/upload-artifact@v4
         with:
-          name: aab-release
-          path: build/app/outputs/bundle/release/*.aab
+          name: aab-rustore-release
+          path: build/app/outputs/bundle/rustoreRelease/app-rustore-release.aab
+
+      - name: Upload AppBundle (Google Play)
+        uses: actions/upload-artifact@v4
+        with:
+          name: aab-gplay-release
+          path: build/app/outputs/bundle/gplayRelease/app-gplay-release.aab
 
   build-web:
     runs-on: ubuntu-latest
@@ -49,7 +58,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.29.x'
+          flutter-version: '3.44.x'
           channel: 'stable'
 
       - name: Install dependencies

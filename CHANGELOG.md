@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0+9
+
+### ✨ Новое
+- **Флаворы магазинов**: `rustore` (по умолчанию) и `gplay`.
+  - **RuStore**: `flutter_rustore_update` + `flutter_rustore_review` — проверка обновления при открытии меню и запрос оценки из настроек.
+  - **Google Play**: `in_app_update` (Play In-App Updates) + `in_app_review` (Play In-App Review) — те же сценарии на нативных API Google.
+- Выбор магазина: `--flavor rustore` (без dart-define) / `--flavor gplay --dart-define=STORE=gplay`; Dart-фасад `lib/core/store/` — экраны не знают о конкретном SDK.
+- Проверка обновления — один раз за сессию при открытии меню; «Оценить игру» — новая кнопка в настройках.
+- **CI**: release-воркфлоу собирает APK (RuStore) и оба AAB (RuStore + Google Play), Flutter в CI поднят до 3.44.x.
+- Требование `minSdk` RuStore SDK (24) совпадает с дефолтом Flutter — бамп не нужен.
+
 ## 1.1.3+8
 
 ### 🔒 Приватность
