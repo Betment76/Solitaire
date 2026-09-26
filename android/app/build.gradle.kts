@@ -68,6 +68,10 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
+            // R8: требование качества Google Play (2027) + минус мегабайты:
+            // неиспользуемый нативный код магазина-соперника вырезается из флавора.
+            isMinifyEnabled = true
+            isShrinkResources = true
         }
     }
 }
