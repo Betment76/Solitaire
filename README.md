@@ -81,6 +81,10 @@ flutter build appbundle --release --flavor googleplay --dart-define-from-file=co
 
 Артефакты: `build/app/outputs/bundle/<flavor>Release/app-<flavor>-release.aab`.
 
+Сборка без `--flavor` тоже работает: агрегатные задачи собирают оба варианта,
+а в «дефолтные» пути (`bundle/release/app-release.aab`, `flutter-apk/app-debug.apk`)
+копируется rustore-вариант (см. хуки в `android/app/build.gradle.kts`).
+
 ## Проверки качества
 
 ### Статический анализ
