@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.2+7
+
+### 🔧 Обновления зависимостей (Tier 1, без ломки API)
+- `yandex_mobileads` 8.0.0 → 8.5.0, `flutter_riverpod` 3.3.1 → 3.4.3, `audioplayers` 6.6.0 → 6.8.1, `shared_preferences_android` 2.4.23 → 2.4.28 и транзитивные пакеты.
+- Убран флаг-опт-аут `android.builtInKotlin=false`: после обновления все плагины собираются в режиме Built-in Kotlin (AGP 9) — последняя миграция тулчейна Flutter завершена.
+- Release-сборка: app-release.aab 62.9 МБ (было 64.0).
+
 ## 1.1.1+6
 
 ### ✨ Новое
