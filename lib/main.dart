@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yandex_mobileads/mobile_ads.dart';
 
+import 'core/ads/yandex_app_open.dart';
 import 'core/analytics/app_analytics.dart';
 import 'core/app.dart';
 
@@ -18,4 +21,6 @@ Future<void> main() async {
   await initAppMetricaIfConfigured();
   // Запускаем приложение внутри ProviderScope для Riverpod.
   runApp(const ProviderScope(child: SolitaireApp()));
+  // Реклама при открытии: грузится по сети, показ случится уже после отрисовки меню.
+  unawaited(showAppOpenAdOncePerSession());
 }
