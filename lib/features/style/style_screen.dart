@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/ads/yandex_rewarded.dart';
 import '../../core/app_table_background.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/models/app_settings.dart';
+import '../../core/models/unlockable_style.dart';
 import '../../core/providers.dart';
 import '../../shared/widgets/game_ui_common.dart';
 
@@ -16,7 +18,6 @@ class StyleScreen extends ConsumerStatefulWidget {
 }
 
 class _StyleScreenState extends ConsumerState<StyleScreen> {
-  // 0 = фон, 1 = рубашка, 2 = стиль карт, 3 = декор (заглушка).
   int _tabIndex = 0;
 
   @override
@@ -26,6 +27,8 @@ class _StyleScreenState extends ConsumerState<StyleScreen> {
           data: (v) => v,
           orElse: () => null,
         );
+    final stylesAsync = ref.watch(stylesProvider);
+
     if (data == null) {
       return Scaffold(
         backgroundColor: Colors.transparent,
@@ -50,7 +53,6 @@ class _StyleScreenState extends ConsumerState<StyleScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // Верхняя шапка как в референсе: крестик + заголовок.
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
                 child: Row(
@@ -69,10 +71,8 @@ class _StyleScreenState extends ConsumerState<StyleScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              // Превью карт.
               _StylePreview(settings: data),
               const Spacer(),
-              // Нижняя панель выбора "как в макете".
               Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
@@ -101,9 +101,9 @@ class _StyleScreenState extends ConsumerState<StyleScreen> {
                     ),
                     const SizedBox(height: 14),
                     if (_tabIndex == 0)
-                      _tableChoices(data, save, s)
+                      _dynamicTableChoices(data, save, s, stylesAsync)
                     else if (_tabIndex == 1)
-                      _backChoices(data, save, s)
+                      _dynamicBackChoices(data, save, s, stylesAsync)
                     else if (_tabIndex == 2)
                       _faceChoices(data, save, s)
                     else
@@ -141,76 +141,75 @@ class _StyleScreenState extends ConsumerState<StyleScreen> {
     );
   }
 
-  Widget _tableChoices(
+  Widget _dynamicTableChoices(
     AppSettings data,
     Future<void> Function(AppSettings) save,
     AppStrings s,
+    AsyncValue<List<UnlockableStyle>> stylesAsync,
   ) {
+    final styles = stylesAsync.asData?.value ?? [];
+    final tableStyles = styles.where((st) => st.type == StyleType.tableBackground).toList();
     return Wrap(
       spacing: 10,
       runSpacing: 10,
-      children: [
-        _swatchTile(
-          selected: data.tableBackgroundStyle == TableBackgroundStyle.green,
-          label: s.t('styleTableGreen'),
-          child: const _BgPreview(
-            colors: [Color(0xFF1C7E3D), Color(0xFF0F5F34)],
-          ),
-          onTap: () => save(
-            data.copyWith(tableBackgroundStyle: TableBackgroundStyle.green),
-          ),
-        ),
-        _swatchTile(
-          selected: data.tableBackgroundStyle == TableBackgroundStyle.blue,
-          label: s.t('styleTableBlue'),
-          child: const _BgPreview(
-            colors: [Color(0xFF1B4F8A), Color(0xFF0E2E56)],
-          ),
-          onTap: () => save(
-            data.copyWith(tableBackgroundStyle: TableBackgroundStyle.blue),
-          ),
-        ),
-        _swatchTile(
-          selected: data.tableBackgroundStyle == TableBackgroundStyle.dark,
-          label: s.t('styleTableDark'),
-          child: const _BgPreview(
-            colors: [Color(0xFF111418), Color(0xFF07090B)],
-          ),
-          onTap: () => save(
-            data.copyWith(tableBackgroundStyle: TableBackgroundStyle.dark),
-          ),
-        ),
-      ],
+      children: tableStyles.map((st) {
+        final colors = tableBgColors[st.id] ?? [Colors.grey, Colors.grey.shade800];
+        final locked = !st.isUnlocked;
+        return _swatchTile(
+          selected: data.tableBackground == st.id,
+          label: s.t(st.displayNameKey),
+          locked: locked,
+          child: _BgPreview(colors: colors, dimmed: locked),
+          onTap: locked
+              ? () => _unlockViaAd(context, st.id)
+              : () => save(data.copyWith(tableBackground: st.id)),
+        );
+      }).toList(),
     );
   }
 
-  Widget _backChoices(
+  Widget _dynamicBackChoices(
     AppSettings data,
     Future<void> Function(AppSettings) save,
     AppStrings s,
+    AsyncValue<List<UnlockableStyle>> stylesAsync,
   ) {
+    final styles = stylesAsync.asData?.value ?? [];
+    final backStyles = styles.where((st) => st.type == StyleType.cardBack).toList();
     return Wrap(
       spacing: 10,
       runSpacing: 10,
-      children: [
-        _swatchTile(
-          selected: data.cardBack == 'blue',
-          label: s.t('styleBackBlue'),
-          child: const _BgPreview(
-            colors: [Color(0xFF2E5EA8), Color(0xFF1D4178)],
-          ),
-          onTap: () => save(data.copyWith(cardBack: 'blue')),
-        ),
-        _swatchTile(
-          selected: data.cardBack == 'red',
-          label: s.t('styleBackRed'),
-          child: const _BgPreview(
-            colors: [Color(0xFFA83A3A), Color(0xFF7A1D1D)],
-          ),
-          onTap: () => save(data.copyWith(cardBack: 'red')),
-        ),
-      ],
+      children: backStyles.map((st) {
+        final colors = cardBackColors[st.id.replaceFirst('back_', '')] ?? [Colors.grey, Colors.grey.shade800];
+        final locked = !st.isUnlocked;
+        return _swatchTile(
+          selected: data.cardBack == st.id.replaceFirst('back_', ''),
+          label: s.t(st.displayNameKey),
+          locked: locked,
+          child: _BgPreview(colors: colors, dimmed: locked),
+          onTap: locked
+              ? () => _unlockViaAd(context, st.id)
+              : () => save(data.copyWith(cardBack: st.id.replaceFirst('back_', ''))),
+        );
+      }).toList(),
     );
+  }
+
+  Future<void> _unlockViaAd(BuildContext context, String styleId) async {
+    final s = AppStrings.of(Localizations.localeOf(context));
+    final go = await showTableAdOfferDialog(
+      context,
+      title: s.t('adUnlockTitle'),
+      body: s.t('adUnlockBody'),
+      primaryLabel: s.t('hintRewardWatch'),
+      secondaryLabel: s.t('hintRewardDecline'),
+    );
+    if (go != true) return;
+    final ok = await showYandexRewardedAd();
+    if (ok) {
+      await ref.read(stylesProvider.notifier).unlock(styleId);
+      ref.read(unlockFlashProvider.notifier).show(styleId);
+    }
   }
 
   Widget _faceChoices(
@@ -246,7 +245,8 @@ class _StyleScreenState extends ConsumerState<StyleScreen> {
     required bool selected,
     required String label,
     required Widget child,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
+    bool locked = false,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -283,6 +283,18 @@ class _StyleScreenState extends ConsumerState<StyleScreen> {
                       radius: 13,
                       backgroundColor: Color(0xFF0E8E5A),
                       child: Icon(Icons.check, size: 16, color: Colors.white),
+                    ),
+                  ),
+                if (locked)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black38,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.lock, color: Colors.white70, size: 28),
+                      ),
                     ),
                   ),
               ],
@@ -359,10 +371,7 @@ class _StylePreview extends StatelessWidget {
     return Container(
       width: 62,
       height: 88,
-      // В превью дублируем отступы minimal как в игре.
-      padding: classic
-          ? const EdgeInsets.all(6)
-          : EdgeInsets.zero,
+      padding: classic ? const EdgeInsets.all(6) : EdgeInsets.zero,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(6),
@@ -456,14 +465,13 @@ class _StylePreview extends StatelessWidget {
   }
 
   Widget _previewBackCard(String back) {
+    final colors = cardBackColors[back] ?? cardBackColors['blue']!;
     return Container(
       width: 62,
       height: 88,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: back == 'red'
-              ? const [Color(0xFFA83A3A), Color(0xFF7A1D1D)]
-              : const [Color(0xFF2E5EA8), Color(0xFF1D4178)],
+          colors: colors,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -476,16 +484,19 @@ class _StylePreview extends StatelessWidget {
 
 /// Маленький прямоугольный превью-фрагмент фона.
 class _BgPreview extends StatelessWidget {
-  const _BgPreview({required this.colors});
+  const _BgPreview({required this.colors, this.dimmed = false});
 
   final List<Color> colors;
+  final bool dimmed;
 
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: colors,
+          colors: dimmed
+              ? colors.map((c) => c.withValues(alpha: 0.3)).toList()
+              : colors,
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),

@@ -10,6 +10,8 @@ import '../../core/l10n/app_strings.dart';
 import '../../core/models/app_settings.dart';
 import '../../core/providers.dart';
 import '../../shared/widgets/game_ui_common.dart';
+import '../../shared/widgets/legal_drop_glow.dart';
+import '../../shared/widgets/win_celebration.dart';
 import '../../shared/widgets/yandex_sticky_banner.dart';
 import 'domain/card.dart';
 import 'domain/klondike_engine.dart';
@@ -25,15 +27,21 @@ class KlondikeScreen extends ConsumerStatefulWidget {
 }
 
 class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
-  static const double _cardWidth = 56;
-  static const double _cardHeight = 84;
+  static const double _baseCardWidth = 56;
+  static const double _baseCardHeight = 84;
   static const double _tableauStep = 20;
+  double get _cardWidth => _baseCardWidth * _cardScale;
+  double get _cardHeight => _baseCardHeight * _cardScale;
+  /// Масштаб карт из настроек, инициализируется в build().
+  double _cardScale = 1.0;
   static const double _boardHorizontalPadding = 2;
   static const Duration _cardMoveDuration = Duration(milliseconds: 260);
   static const Duration _dragFadeDuration = Duration(milliseconds: 180);
 
   int? _dragFromColumn;
   int? _dragFromCardIndex;
+  /// Активный payload перетаскивания для подсветки легальных целей.
+  _DragPayload? _activeDragPayload;
   int? _dropPulseColumn;
   int _seconds = 0;
   bool _secondsHydrated = false;
@@ -53,6 +61,7 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
   void _resetDragState() {
     _dragFromColumn = null;
     _dragFromCardIndex = null;
+    _activeDragPayload = null;
   }
 
   // Короткий "инерционный довод" целевой колонки после удачного дропа.
@@ -76,7 +85,8 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
     super.initState();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
-      // Не крутим время после победы
+      final showTimer = ref.read(settingsProvider).asData?.value.showTimer ?? true;
+      if (!showTimer) return;
       final st = ref.read(klondikeControllerProvider).asData?.value;
       if (st == null || st.isWin) return;
       setState(() => _seconds++);
@@ -395,12 +405,18 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
       _secondsHydrated = true;
     }
 
+    // Обновляем масштаб карт из настроек при каждой перерисовке.
+    _cardScale = effectiveCardScale(
+      ref.watch(settingsProvider.select((v) => v.asData?.value.cardScale ?? 1.0)),
+      context,
+    );
     final s = AppStrings.of(Localizations.localeOf(context));
     final settings = ref.watch(settingsProvider).asData?.value;
+    final showTimer = settings?.showTimer ?? true;
     final score =
         state.foundations.values.fold<int>(0, (a, b) => a + b.length) * 10;
 
-    return Scaffold(
+    final gameWidget = Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
         decoration: tableBackgroundDecoration(settings),
@@ -418,8 +434,10 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
                     ),
                     const Spacer(),
                     metricWidget(s.t('metricScore'), '$score'),
-                    const Spacer(),
-                    metricWidget(s.t('metricTime'), _timeText(_seconds)),
+                    if (showTimer) ...[
+                      const Spacer(),
+                      metricWidget(s.t('metricTime'), _timeText(_seconds)),
+                    ],
                     const Spacer(),
                     metricWidget(s.t('metricMoves'), '${state.moves}'),
                     const Spacer(),
@@ -503,8 +521,6 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
                                         : _hintGlow(
                                             'hint_waste',
                                             Stack(
-                                              // Разрешаем небольшой выход за границы слота,
-                                              // чтобы в режиме draw-3 были видны все 3 карты.
                                               clipBehavior: Clip.none,
                                               children: _state.waste.reversed
                                                 .take(_state.drawCount == 3 ? 3 : 1)
@@ -517,8 +533,6 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
                                               final index = entry.key;
                                               final card = entry.value;
                                               final isTop = identical(card, _state.waste.last);
-                                              // Верхняя карта должна быть визуально сверху,
-                                              // поэтому рисуем её последней в Stack.
                                               final right = _state.drawCount == 3
                                                   ? 10.0 * index
                                                   : 0.0;
@@ -535,11 +549,24 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
                                                     ? Draggable<_DragPayload>(
                                                         data: _DragPayload.fromWaste(card.suit.name),
                                                         dragAnchorStrategy: pointerDragAnchorStrategy,
-                                                        onDragStarted: () => setState(_resetDragState),
-                                                        onDragEnd: (_) => setState(_resetDragState),
-                                                        onDragCompleted: () => setState(_resetDragState),
-                                                        onDraggableCanceled: (_, __) => setState(_resetDragState),
-                                                        // Во overlay без явной ширины карта схлопывается по intrinsic — как на столе.
+                                                        onDragStarted: () => setState(() {
+                                                          _activeDragPayload = _DragPayload.fromWaste(card.suit.name);
+                                                        }),
+                                                        onDragEnd: (_) => setState(() {
+                                                          _dragFromColumn = null;
+                                                          _dragFromCardIndex = null;
+                                                          _activeDragPayload = null;
+                                                        }),
+                                                        onDragCompleted: () => setState(() {
+                                                          _dragFromColumn = null;
+                                                          _dragFromCardIndex = null;
+                                                          _activeDragPayload = null;
+                                                        }),
+                                                        onDraggableCanceled: (_, __) => setState(() {
+                                                          _dragFromColumn = null;
+                                                          _dragFromCardIndex = null;
+                                                          _activeDragPayload = null;
+                                                        }),
                                                         feedback: _dragFeedbackCard(
                                                           SizedBox(
                                                             width: wasteW,
@@ -563,6 +590,7 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
                                     child: _hintGlow(
                                       'hint_stock',
                                       GestureDetector(
+                                        key: const Key('klondike_draw_stock'),
                                         onTap: () {
                                           ref
                                               .read(soundServiceProvider)
@@ -654,6 +682,36 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
         ),
       ),
     );
+
+    if (state.isWin) {
+      if (_hintYellowOn) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _hintKeys = {};
+              _hintYellowOn = false;
+            });
+          }
+        });
+      }
+      return Stack(
+        children: [
+          gameWidget,
+          WinCelebration(
+            modeLabel: s.t('klondike'),
+            moves: state.moves,
+            seconds: showTimer ? _seconds : 0,
+            onNewGame: () {
+              _controller.newGame();
+              setState(() => _seconds = 0);
+            },
+            onMenu: _exitToMenu,
+          ),
+        ],
+      );
+    }
+
+    return gameWidget;
   }
 
   String _timeText(int seconds) {
@@ -776,8 +834,13 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
           ],
         );
 
+        // Подсветка легальной цели при drag-and-drop
+        final bool isLegalDropTarget =
+            _activeDragPayload != null &&
+                _canDropToFoundation(_activeDragPayload!, suitName);
+
         if (pile.isEmpty) {
-          return _hintGlow(
+          final w = _hintGlow(
             'hint_f:$suitName',
             AnimatedScale(
               duration: const Duration(milliseconds: 160),
@@ -785,16 +848,32 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
               child: slotWithCard,
             ),
           );
+          return isLegalDropTarget ? legalDropGlow(w) : w;
         }
         final top = pile.last;
-        return _hintGlow(
+        final w = _hintGlow(
           'hint_f:$suitName',
           Draggable<_DragPayload>(
           data: _DragPayload.fromFoundation(top.suit.name),
           dragAnchorStrategy: pointerDragAnchorStrategy,
-          onDragEnd: (_) => setState(_resetDragState),
-          onDragCompleted: () => setState(_resetDragState),
-          onDraggableCanceled: (_, __) => setState(_resetDragState),
+          onDragStarted: () => setState(() {
+            _activeDragPayload = _DragPayload.fromFoundation(top.suit.name);
+          }),
+          onDragEnd: (_) => setState(() {
+            _dragFromColumn = null;
+            _dragFromCardIndex = null;
+            _activeDragPayload = null;
+          }),
+          onDragCompleted: () => setState(() {
+            _dragFromColumn = null;
+            _dragFromCardIndex = null;
+            _activeDragPayload = null;
+          }),
+          onDraggableCanceled: (_, __) => setState(() {
+            _dragFromColumn = null;
+            _dragFromCardIndex = null;
+            _activeDragPayload = null;
+          }),
           feedback: _dragFeedbackCard(
             SizedBox(
               width: _cardWidth,
@@ -816,6 +895,7 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
           ),
         ),
         );
+        return isLegalDropTarget ? legalDropGlow(w) : w;
       },
     );
   }
@@ -828,11 +908,48 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
       onAcceptWithDetails: (details) {
         _dropToTableau(details.data, columnIndex);
         if (_dragFromColumn != null || _dragFromCardIndex != null) {
-          setState(_resetDragState);
+          setState(() {
+            _dragFromColumn = null;
+            _dragFromCardIndex = null;
+            _activeDragPayload = null;
+          });
         }
       },
       builder: (context, candidateData, rejectedData) {
-        return GestureDetector(
+        // Подсветка легальной цели при drag-and-drop
+        final bool isLegalDropTarget =
+            _activeDragPayload != null &&
+                _canDropToTableau(_activeDragPayload!, columnIndex);
+
+        Widget inner;
+        if (pile.isEmpty) {
+          inner = Align(
+            alignment: Alignment.topCenter,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: _hintGlow(
+                'hint_t:$columnIndex',
+                _emptyTopCard(),
+              ),
+            ),
+          );
+        } else {
+          inner = Stack(
+            children: [
+              for (var idx = 0; idx < pile.length; idx++)
+                AnimatedPositioned(
+                  duration: _cardMoveDuration,
+                  curve: Curves.easeInOutCubicEmphasized,
+                  top: idx * _tableauStep,
+                  left: 0,
+                  right: 0,
+                  child: _buildTableauCard(pile, idx, columnIndex),
+                ),
+            ],
+          );
+        }
+
+        final content = GestureDetector(
           onTap: () {
             ref.read(soundServiceProvider).play(SoundEvent.cardTap);
             _controller.autoMoveTableauTop(columnIndex);
@@ -840,38 +957,11 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
           child: AnimatedContainer(
             duration: _cardMoveDuration,
             constraints: const BoxConstraints(minHeight: double.infinity),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                if (pile.isEmpty) {
-                  // Пустая колонка должна оставаться крупной зоной drop.
-                  return Align(
-                    alignment: Alignment.topCenter,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: _hintGlow(
-                        'hint_t:$columnIndex',
-                        _emptyTopCard(),
-                      ),
-                    ),
-                  );
-                }
-                return Stack(
-                  children: [
-                    for (var idx = 0; idx < pile.length; idx++)
-                      AnimatedPositioned(
-                        duration: _cardMoveDuration,
-                        curve: Curves.easeInOutCubicEmphasized,
-                        top: idx * _tableauStep,
-                        left: 0,
-                        right: 0,
-                        child: _buildTableauCard(pile, idx, columnIndex),
-                      ),
-                  ],
-                );
-              },
-            ),
+            child: LayoutBuilder(builder: (context, constraints) => inner),
           ),
         );
+
+        return isLegalDropTarget ? legalDropGlow(content) : content;
       },
     );
   }
@@ -936,13 +1026,26 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
     return Draggable<_DragPayload>(
       data: _DragPayload.fromTableau(columnIndex, idx, card.suit.name),
       dragAnchorStrategy: pointerDragAnchorStrategy,
-      onDragStarted: () => setState(() {
-        _dragFromColumn = columnIndex;
-        _dragFromCardIndex = idx;
+          onDragStarted: () => setState(() {
+            _dragFromColumn = columnIndex;
+            _dragFromCardIndex = idx;
+            _activeDragPayload = _DragPayload.fromTableau(columnIndex, idx, run[0].suit.name);
+          }),
+      onDragEnd: (_) => setState(() {
+        _dragFromColumn = null;
+        _dragFromCardIndex = null;
+        _activeDragPayload = null;
       }),
-      onDragEnd: (_) => setState(_resetDragState),
-      onDragCompleted: () => setState(_resetDragState),
-      onDraggableCanceled: (_, __) => setState(_resetDragState),
+      onDragCompleted: () => setState(() {
+        _dragFromColumn = null;
+        _dragFromCardIndex = null;
+        _activeDragPayload = null;
+      }),
+      onDraggableCanceled: (_, __) => setState(() {
+        _dragFromColumn = null;
+        _dragFromCardIndex = null;
+        _activeDragPayload = null;
+      }),
       feedback: _dragFeedbackCard(runFeedback),
       // Убираем временный placeholder, чтобы не оставался "залипший" полупрозрачный след.
       childWhenDragging: const SizedBox.shrink(),
@@ -993,9 +1096,7 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
         height: _cardHeight,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: back == 'red'
-                ? const [Color(0xFFA83A3A), Color(0xFF7A1D1D)]
-                : const [Color(0xFF2E5EA8), Color(0xFF1D4178)],
+            colors: cardBackGradientColors(back),
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),

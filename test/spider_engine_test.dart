@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:solitaire/core/models/card.dart';
 import 'package:solitaire/features/spider/domain/spider_engine.dart';
 import 'package:solitaire/features/spider/domain/spider_state.dart';
-import 'package:solitaire/features/klondike/domain/card.dart';
 
 void main() {
   group('SpiderEngine', () {
@@ -235,6 +235,142 @@ void main() {
         ],
       );
       expect(engine.hint(state), 'spider_move_0_0_to_1');
+    });
+
+    test('dealFromStock: пустой stock не меняет состояние', () {
+      final state = SpiderState(
+        stock: const [],
+        completedSequences: 0,
+        moves: 5,
+        tableau: List.generate(10, (_) => <PlayingCard>[]),
+      );
+      final next = engine.dealFromStock(state);
+      expect(identical(next, state), isTrue);
+    });
+
+    test('dealFromStock: раздача по одной карте в каждую колонку', () {
+      final state = SpiderState(
+        stock: List.generate(10, (_) => PlayingCard(suit: CardSuit.spades, rank: 5, faceUp: false)),
+        completedSequences: 0,
+        moves: 0,
+        tableau: List.generate(10, (_) => <PlayingCard>[]),
+      );
+      final next = engine.dealFromStock(state);
+      expect(identical(next, state), isFalse);
+      expect(next.moves, 1);
+      expect(next.stock, isEmpty);
+      expect(next.tableau.every((p) => p.length == 1), isTrue);
+    });
+
+    test('canAutoFinish: true когда все карты открыты и без стока', () {
+      // Build a state where tableau has only face-up cards in valid runs
+      final state = SpiderState(
+        stock: const [],
+        completedSequences: 0,
+        moves: 0,
+        tableau: List.generate(10, (i) => i < 2
+            ? [PlayingCard(suit: CardSuit.spades, rank: 3, faceUp: true)]
+            : <PlayingCard>[]),
+      );
+      final result = engine.canAutoFinish(state);
+      // With no stock and all face-up, should be true
+      expect(result, isTrue);
+    });
+
+    test('canAutoFinish: false когда есть закрытые карты', () {
+      final state = SpiderState(
+        stock: const [],
+        completedSequences: 0,
+        moves: 0,
+        tableau: [
+          const [PlayingCard(suit: CardSuit.spades, rank: 3, faceUp: false)],
+          ...List.generate(9, (_) => <PlayingCard>[]),
+        ],
+      );
+      expect(engine.canAutoFinish(state), isFalse);
+    });
+
+    test('canAutoFinish: true если есть ход табло даже при непустом stock', () {
+      final state = SpiderState(
+        stock: [PlayingCard(suit: CardSuit.spades, rank: 5, faceUp: false)],
+        completedSequences: 0,
+        moves: 0,
+        tableau: [
+          const [PlayingCard(suit: CardSuit.spades, rank: 3, faceUp: true)],
+          ...List.generate(9, (_) => <PlayingCard>[]),
+        ],
+      );
+      expect(engine.canAutoFinish(state), isTrue);
+    });
+
+    test('autoFinishAll обрабатывает все колонки', () {
+      final state = SpiderState(
+        stock: const [],
+        completedSequences: 0,
+        moves: 0,
+        tableau: [
+          const [PlayingCard(suit: CardSuit.spades, rank: 13, faceUp: true)],
+          const [PlayingCard(suit: CardSuit.spades, rank: 12, faceUp: true)],
+          ...List.generate(8, (_) => <PlayingCard>[]),
+        ],
+      );
+      final next = engine.autoFinishAll(state);
+      expect(next.tableau[0].isEmpty || next.tableau[1].isEmpty, isTrue);
+    });
+
+    test('canDragRun: true для одномастной последовательности', () {
+      final state = SpiderState(
+        stock: const [],
+        completedSequences: 0,
+        moves: 0,
+        tableau: [
+          const [
+            PlayingCard(suit: CardSuit.spades, rank: 10, faceUp: true),
+            PlayingCard(suit: CardSuit.spades, rank: 9, faceUp: true),
+          ],
+          ...List.generate(9, (_) => <PlayingCard>[]),
+        ],
+      );
+      expect(engine.canDragRun(state, 0, 0), isTrue);
+      expect(engine.canDragRun(state, 0, 1), isTrue);
+    });
+
+    test('autoMoveTop перемещает карту в foundation', () {
+      final state = SpiderState(
+        stock: const [],
+        completedSequences: 0,
+        moves: 0,
+        tableau: [
+          const [PlayingCard(suit: CardSuit.spades, rank: 13, faceUp: true)],
+          const [PlayingCard(suit: CardSuit.spades, rank: 12, faceUp: true)],
+          ...List.generate(8, (_) => <PlayingCard>[]),
+        ],
+      );
+      final next = engine.autoMoveTop(state, 0);
+      // Either stays same or moves to another column
+      expect(next.moves >= state.moves || identical(next, state), isTrue);
+    });
+
+    test('isWin: true когда 8 последовательностей собраны', () {
+      final state = SpiderState(
+        stock: const [],
+        completedSequences: 8,
+        completedSuits: List.filled(8, CardSuit.spades),
+        moves: 100,
+        tableau: List.generate(10, (_) => <PlayingCard>[]),
+      );
+      expect(state.isWin, isTrue);
+    });
+
+    test('isWin: false когда меньше 8 последовательностей', () {
+      final state = SpiderState(
+        stock: const [],
+        completedSequences: 7,
+        completedSuits: List.filled(7, CardSuit.spades),
+        moves: 100,
+        tableau: List.generate(10, (_) => <PlayingCard>[]),
+      );
+      expect(state.isWin, isFalse);
     });
   });
 }

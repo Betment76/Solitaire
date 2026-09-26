@@ -30,6 +30,8 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
   bool _dailyRewardRetryUsed = false;
   /// Бесплатные отмены за партию (5), дальше — rewarded как в Пауке.
   int _undoBudget = 5;
+  /// Был ли хоть раз использован Undo за эту партию.
+  bool _usedUndo = false;
 
   bool get isDailySession => _dailySessionYmd != null;
   bool get canOfferDailyRetryAd {
@@ -162,6 +164,7 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
     if (current == null || _undo.isEmpty) return;
     if (_undoBudget <= 0) return;
     _undoBudget--;
+    _usedUndo = true;
     final prev = _undo.removeLast();
     _redo.add(current);
     state = AsyncData(prev);
@@ -325,17 +328,23 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
             SolitaireVariant.klondike,
             klondikeScore: score,
             dailyChallenge: day != null,
+            moves: next.moves,
+            elapsedSeconds: next.elapsedSeconds,
+            usedUndo: _usedUndo,
           ),
     );
     if (day != null) {
-      unawaited(_finishDailyWin(day, next.moves));
+      unawaited(_finishDailyWin(day, next.moves, next.elapsedSeconds));
     }
   }
 
   /// Рекорд дня + уведомление для UI и обновление провайдера лучшего результата.
-  Future<void> _finishDailyWin(String day, int moves) async {
-    final improved = await ref.read(localStoreProvider).saveDailyKlondikeBestMovesIfBetter(day, moves);
+  Future<void> _finishDailyWin(String day, int moves, int elapsedSeconds) async {
+    final store = ref.read(localStoreProvider);
+    final improved = await store.saveDailyKlondikeBestMovesIfBetter(day, moves);
+    await store.saveDailyKlondikeBestTimeIfBetter(day, elapsedSeconds);
     ref.read(dailyWinFlashProvider.notifier).show(DailyWinFlash(moves: moves, newBestForDay: improved));
     ref.invalidate(dailyKlondikeBestMovesProvider(day));
+    ref.invalidate(dailyKlondikeBestTimeProvider(day));
   }
 }

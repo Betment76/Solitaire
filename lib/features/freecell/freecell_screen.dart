@@ -11,6 +11,8 @@ import '../../core/models/app_settings.dart';
 import '../../core/models/card.dart';
 import '../../core/providers.dart';
 import '../../shared/widgets/game_ui_common.dart';
+import '../../shared/widgets/legal_drop_glow.dart';
+import '../../shared/widgets/win_celebration.dart';
 import '../../shared/widgets/yandex_sticky_banner.dart';
 import 'domain/freecell_persistence.dart';
 import 'domain/freecell_state.dart';
@@ -37,6 +39,10 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
   int? _dropPulseFoundation;
   int? _dragRunColumn;
   int? _dragRunStart;
+  /// Активное перетаскивание для зелёной подсветки целей.
+  _FcDragPayload? _activeFcDrag;
+  int _seconds = 0;
+  late final Timer _timer;
 
   FreecellState get _state =>
       ref.read(freecellControllerProvider).asData!.value;
@@ -57,6 +63,91 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
       if (!mounted || _dropPulseFoundation != suitName.hashCode) return;
       setState(() => _dropPulseFoundation = null);
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      final showTimer = ref.read(settingsProvider).asData?.value.showTimer ?? true;
+      if (!showTimer) return;
+      final st = ref.read(freecellControllerProvider).asData?.value;
+      if (st == null || st.isWin) return;
+      setState(() => _seconds++);
+      ref.read(freecellControllerProvider.notifier).syncElapsed(_seconds);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (ref.read(freecellOpenDailyProvider)) {
+        ref.read(freecellOpenDailyProvider.notifier).consume();
+        ref.read(freecellControllerProvider.notifier).startDailyChallenge();
+        setState(() => _seconds = 0);
+        final loc = AppStrings.of(Localizations.localeOf(context));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(loc.t('dailyStarted')),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  void _clearFcDrag() {
+    setState(() {
+      _activeFcDrag = null;
+      _dragRunColumn = null;
+      _dragRunStart = null;
+    });
+  }
+
+  String _timeText(int seconds) {
+    final m = (seconds ~/ 60).toString().padLeft(2, '0');
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  bool _isLegalFcFreeCell(int idx) {
+    final p = _activeFcDrag;
+    if (p == null || _state.freeCells[idx] != null) return false;
+    if (p.source == _FcSource.foundation) return false;
+    if (p.source == _FcSource.freeCell) return p.fromCell != idx;
+    return true;
+  }
+
+  bool _isLegalFcFoundation(CardSuit suit) {
+    final p = _activeFcDrag;
+    if (p == null || p.suitName != suit.name) return false;
+    if (p.source == _FcSource.tableau) {
+      return _controller.canMoveTableauToFoundation(p.fromColumn!);
+    }
+    if (p.source == _FcSource.freeCell) {
+      return _controller.canMoveFreeCellToFoundation(p.fromCell!);
+    }
+    return false;
+  }
+
+  bool _isLegalFcColumn(int col) {
+    final p = _activeFcDrag;
+    if (p == null) return false;
+    if (p.source == _FcSource.tableau) {
+      return _controller.canMoveTableauToTableau(
+        p.fromColumn!,
+        col,
+        fromCardIndex: p.fromCardIndex,
+      );
+    }
+    if (p.source == _FcSource.freeCell) {
+      return _controller.canMoveFreeCellToTableau(p.fromCell!, col);
+    }
+    return false;
   }
 
   /// Автодобор в основания без рекламы (только если движок разрешает).
@@ -94,6 +185,28 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
         SnackBar(content: Text(s.t('rewardAdFailed')), behavior: SnackBarBehavior.floating),
       );
     }
+  }
+
+  /// Показать подсказку в SnackBar.
+  void _onHintPressed() {
+    final hint = _controller.hint();
+    if (hint == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Нет доступных ходов'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(hint),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   /// Отмена: 5 бесплатных за партию, дальше диалог и rewarded (как в Пауке).
@@ -153,8 +266,20 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
     }
 
     final s = AppStrings.of(Localizations.localeOf(context));
+    final showTimer = settings?.showTimer ?? true;
 
-    return Scaffold(
+    ref.listen(dailyFreecellWinFlashProvider, (prev, next) {
+      if (next == null || !mounted) return;
+      final loc = AppStrings.of(Localizations.localeOf(context));
+      final base = loc.t('dailyWinPrefix').replaceAll('{m}', '${next.moves}');
+      final suffix = next.newBestForDay ? ' ${loc.t('dailyWinSuffixNewBest')}' : '';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$base$suffix'), behavior: SnackBarBehavior.floating),
+      );
+      ref.read(dailyFreecellWinFlashProvider.notifier).clear();
+    });
+
+    final gameBody = Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
         decoration: tableBackgroundDecoration(settings),
@@ -172,6 +297,10 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
                     ),
                     const Spacer(),
                     metricWidget(s.t('metricMoves'), '${state.moves}'),
+                    if (showTimer) ...[
+                      const Spacer(),
+                      metricWidget(s.t('time'), _timeText(_seconds)),
+                    ],
                     const Spacer(),
                     topCircleButton(
                       Icons.palette_rounded,
@@ -253,6 +382,13 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
                         : true,
                   ),
                   (
+                    icon: Icons.lightbulb_outline,
+                    label: 'Подсказка',
+                    onTap: _onHintPressed,
+                    badge: null,
+                    badgePlay: false,
+                  ),
+                  (
                     icon: Icons.auto_fix_high,
                     label: s.t('autoFinish'),
                     onTap: _controller.canAutoFinish() ? _onAutoFinishPressed : null,
@@ -267,6 +403,25 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
         ),
       ),
     );
+
+    if (state.isWin) {
+      return Stack(
+        children: [
+          gameBody,
+          WinCelebration(
+            modeLabel: s.t('freecell'),
+            moves: state.moves,
+            seconds: showTimer ? _seconds : 0,
+            onNewGame: () {
+              _controller.newGame();
+              setState(() => _seconds = 0);
+            },
+            onMenu: () => Navigator.pop(context),
+          ),
+        ],
+      );
+    }
+    return gameBody;
   }
 
   /// Верх ячеек + оснований: одна раскладка на любую ширину (без горизонтального скролла и «узкого» режима).
@@ -376,15 +531,22 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
               scale: isPulse ? 1.05 : 1,
               child: slotWidget,
             );
+            final slot = AnimatedScale(
+              duration: const Duration(milliseconds: 160),
+              scale: hasHover ? 1.05 : 1,
+              child: pulsedWidget,
+            );
             if (card == null) {
-              return AnimatedScale(
-                duration: const Duration(milliseconds: 160),
-                scale: hasHover ? 1.05 : 1,
-                child: pulsedWidget,
-              );
+              return _isLegalFcFreeCell(idx) ? legalDropGlow(slot) : slot;
             }
             return Draggable<_FcDragPayload>(
               data: _FcDragPayload.fromFreeCell(idx, card.suit.name),
+              onDragStarted: () => setState(() {
+                _activeFcDrag = _FcDragPayload.fromFreeCell(idx, card.suit.name);
+              }),
+              onDragEnd: (_) => _clearFcDrag(),
+              onDragCompleted: _clearFcDrag,
+              onDraggableCanceled: (_, __) => _clearFcDrag(),
               feedback: Material(
                 color: Colors.transparent,
                 child: _fcPlayingCard(card, width: w),
@@ -435,15 +597,24 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
               scale: isPulse ? 1.05 : 1,
               child: slotWidget,
             );
+            final slot = AnimatedScale(
+              duration: const Duration(milliseconds: 160),
+              scale: hasHover ? 1.05 : 1,
+              child: pulsedWidget,
+            );
             if (pile.isEmpty) {
-              return AnimatedScale(
-                duration: const Duration(milliseconds: 160),
-                scale: hasHover ? 1.05 : 1,
-                child: pulsedWidget,
-              );
+              return _isLegalFcFoundation(suit)
+                  ? legalDropGlow(slot)
+                  : slot;
             }
             return Draggable<_FcDragPayload>(
               data: _FcDragPayload.fromFoundation(suit.name),
+              onDragStarted: () => setState(() {
+                _activeFcDrag = _FcDragPayload.fromFoundation(suit.name);
+              }),
+              onDragEnd: (_) => _clearFcDrag(),
+              onDragCompleted: _clearFcDrag,
+              onDraggableCanceled: (_, __) => _clearFcDrag(),
               feedback: Material(
                 color: Colors.transparent,
                 child: _fcPlayingCard(pile.last, width: w),
@@ -481,7 +652,7 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
           _controller.moveFreeCellToTableau(p.fromCell!, column);
       },
       builder: (context, candidate, rejected) {
-        return GestureDetector(
+        final columnBody = GestureDetector(
           onTap: () {
             ref.read(soundServiceProvider).play(SoundEvent.cardTap);
             _controller.autoMoveTableauTop(column);
@@ -509,15 +680,16 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
                                   setState(() {
                                     _dragRunColumn = column;
                                     _dragRunStart = i;
+                                    _activeFcDrag = _FcDragPayload.fromTableau(
+                                      column,
+                                      i,
+                                      pile[i].suit.name,
+                                    );
                                   });
                                 },
-                                onDragEnd: (_) {
-                                  if (!mounted) return;
-                                  setState(() {
-                                    _dragRunColumn = null;
-                                    _dragRunStart = null;
-                                  });
-                                },
+                                onDragEnd: (_) => _clearFcDrag(),
+                                onDragCompleted: _clearFcDrag,
+                                onDraggableCanceled: (_, __) => _clearFcDrag(),
                                 feedback: Material(
                                   color: Colors.transparent,
                                   child: _runDragFeedback(pile, i, cardWidth),
@@ -532,6 +704,7 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
             },
           ),
         );
+        return _isLegalFcColumn(column) ? legalDropGlow(columnBody) : columnBody;
       },
     );
   }
@@ -613,9 +786,7 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
       height: _smallCardHeight,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: back == 'red'
-              ? const [Color(0xFFA83A3A), Color(0xFF7A1D1D)]
-              : const [Color(0xFF2E5EA8), Color(0xFF1D4178)],
+          colors: cardBackGradientColors(back),
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),

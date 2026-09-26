@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/analytics/app_analytics.dart';
 import '../../core/audio/sound_service.dart';
+import '../../core/daily_seed.dart';
 import '../../core/models/app_stats.dart';
 import '../../core/providers.dart';
 import 'domain/freecell_engine.dart';
@@ -21,11 +22,22 @@ class FreecellController extends AsyncNotifier<FreecellState> {
 
   /// Бесплатные отмены за партию (5), дальше — rewarded.
   int _undoBudget = 5;
+  /// Был ли хоть раз использован Undo за эту партию.
+  bool _usedUndo = false;
+  /// Секунды с экрана (для рекордов и экрана победы).
+  int elapsedSeconds = 0;
+  /// Использовались ли ячейки free cell (для проверки испытания noCells).
+  bool _usedFreeCells = false;
+  /// Дата ежедневной сессии `YYYY-MM-DD`.
+  String? _dailySessionYmd;
 
+  bool get isDailySession => _dailySessionYmd != null;
   bool get canUndo => _undo.isNotEmpty;
   bool get canRedo => _redo.isNotEmpty;
   bool get canUndoWithBudget => canUndo && _undoBudget > 0;
   int get undoBudgetRemaining => _undoBudget;
+
+  static String _todayYmd() => DateTime.now().toIso8601String().substring(0, 10);
 
   @override
   Future<FreecellState> build() async {
@@ -35,13 +47,39 @@ class FreecellController extends AsyncNotifier<FreecellState> {
     _redo.clear();
     if (restored != null) {
       _undoBudget = restored.undoBudget;
+      _usedUndo = false;
+      _usedFreeCells = false;
+      _dailySessionYmd = restored.dailyYmd;
       return restored.state;
     }
     _undoBudget = 5;
+    _usedUndo = false;
+    _usedFreeCells = false;
     return _engine.newGame(seed: DateTime.now().millisecondsSinceEpoch);
   }
 
+  /// Ежедневная раздача FreeCell (фиксированный seed от даты).
+  Future<void> startDailyChallenge() async {
+    final cur = state.asData?.value;
+    if (cur != null && !cur.isWin) {
+      unawaited(ref.read(statsProvider.notifier).recordGameAbandoned());
+    }
+    _dailySessionYmd = _todayYmd();
+    final seed = freecellDailySeed(_dailySessionYmd!);
+    final next = _engine.newGame(seed: seed);
+    _undo.clear();
+    _redo.clear();
+    _undoBudget = 5;
+    _usedUndo = false;
+    _usedFreeCells = false;
+    elapsedSeconds = 0;
+    state = AsyncData(next);
+    await _persist(next);
+    unawaited(reportGameStart(SolitaireVariant.freecell, dailyChallenge: true));
+  }
+
   Future<void> newGame() async {
+    _dailySessionYmd = null;
     final cur = state.asData?.value;
     if (cur != null && !cur.isWin) {
       unawaited(ref.read(statsProvider.notifier).recordGameAbandoned());
@@ -50,6 +88,8 @@ class FreecellController extends AsyncNotifier<FreecellState> {
     _undo.clear();
     _redo.clear();
     _undoBudget = 5;
+    _usedUndo = false;
+    _usedFreeCells = false;
     state = AsyncData(next);
     await _persist(next);
     unawaited(reportGameStart(SolitaireVariant.freecell));
@@ -91,6 +131,7 @@ class FreecellController extends AsyncNotifier<FreecellState> {
     if (current == null || _undo.isEmpty) return;
     if (_undoBudget <= 0) return;
     _undoBudget--;
+    _usedUndo = true;
     final prev = _undo.removeLast();
     _redo.add(current);
     state = AsyncData(prev);
@@ -118,6 +159,7 @@ class FreecellController extends AsyncNotifier<FreecellState> {
     final current = state.asData?.value;
     if (current == null) return;
     final next = _engine.moveTableauToFreeCell(current, fromCol, cellIndex);
+    if (!identical(next, current)) _usedFreeCells = true;
     _apply(current, next);
   }
 
@@ -181,17 +223,37 @@ class FreecellController extends AsyncNotifier<FreecellState> {
     _apply(current, next);
   }
 
+  /// Возвращает подсказку от движка или null.
+  String? hint() {
+    final current = state.asData?.value;
+    if (current == null) return null;
+    return _engine.hint(current);
+  }
+
   bool canAutoFinish() {
     final current = state.asData?.value;
     if (current == null) return false;
     return _engine.canAutoFinish(current);
   }
 
+  void syncElapsed(int seconds) => elapsedSeconds = seconds;
+
   void _apply(FreecellState current, FreecellState next) {
     if (identical(next, current)) return;
     if (!current.isWin && next.isWin) {
       ref.read(soundServiceProvider).play(SoundEvent.win);
-      unawaited(ref.read(statsProvider.notifier).recordGameWin(SolitaireVariant.freecell));
+      final day = _dailySessionYmd;
+      unawaited(ref.read(statsProvider.notifier).recordGameWin(
+        SolitaireVariant.freecell,
+        moves: next.moves,
+        elapsedSeconds: elapsedSeconds,
+        usedUndo: _usedUndo,
+        usedFreeCells: _usedFreeCells,
+        dailyChallenge: day != null,
+      ));
+      if (day != null) {
+        unawaited(_finishDailyWin(day, next.moves, elapsedSeconds));
+      }
     }
     _undo.add(current);
     _redo.clear();
@@ -199,11 +261,23 @@ class FreecellController extends AsyncNotifier<FreecellState> {
     unawaited(_persist(next));
   }
 
+  Future<void> _finishDailyWin(String day, int moves, int seconds) async {
+    final store = ref.read(localStoreProvider);
+    final improvedMoves = await store.saveDailyFreecellBestMovesIfBetter(day, moves);
+    await store.saveDailyFreecellBestTimeIfBetter(day, seconds);
+    ref.read(dailyFreecellWinFlashProvider.notifier).show(
+          DailyWinFlash(moves: moves, newBestForDay: improvedMoves),
+        );
+    ref.invalidate(dailyFreecellBestMovesProvider(day));
+    ref.invalidate(dailyFreecellBestTimeProvider(day));
+  }
+
   Future<void> _persist(FreecellState value) async {
     await ref.read(localStoreProvider).saveFreecellState(
           FreecellPersistence.toMap(
             value,
             undoBudget: _undoBudget,
+            dailyYmd: _dailySessionYmd,
           ),
         );
   }

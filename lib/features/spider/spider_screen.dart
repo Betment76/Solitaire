@@ -11,6 +11,8 @@ import '../../core/models/app_settings.dart';
 import '../../core/providers.dart';
 import '../../core/models/card.dart';
 import '../../shared/widgets/game_ui_common.dart';
+import '../../shared/widgets/legal_drop_glow.dart';
+import '../../shared/widgets/win_celebration.dart';
 import '../../shared/widgets/yandex_sticky_banner.dart';
 import 'domain/spider_engine.dart';
 import 'domain/spider_state.dart';
@@ -39,6 +41,8 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
 
   int? _dragFromColumn;
   int? _dragFromIndex;
+  int _seconds = 0;
+  late final Timer _timer;
   bool _isDealing = false;
   int? _activeDealFlightColumn;
   Set<int> _dealRevealedColumns = const <int>{};
@@ -226,13 +230,34 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
   @override
   void initState() {
     super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      final showTimer = ref.read(settingsProvider).asData?.value.showTimer ?? true;
+      if (!showTimer) return;
+      final st = ref.read(spiderControllerProvider).asData?.value;
+      if (st == null || st.isWin) return;
+      setState(() => _seconds++);
+      _controller.syncElapsed(_seconds);
+    });
   }
 
   @override
   void dispose() {
+    _timer.cancel();
     _dealFlightController?.dispose();
     _collectFlightController?.dispose();
     super.dispose();
+  }
+
+  String _timeText(int seconds) {
+    final m = (seconds ~/ 60).toString().padLeft(2, '0');
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  Future<void> _onSpiderAutoFinish() async {
+    if (!_controller.canAutoFinish()) return;
+    await _controller.autoFinishAll();
   }
 
   Future<void> _playCompleteSequenceAnimation({
@@ -396,6 +421,7 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
 
     final s = AppStrings.of(Localizations.localeOf(context));
     final settings = ref.watch(settingsProvider).asData?.value;
+    final showTimer = settings?.showTimer ?? true;
 
     ref.listen(spiderControllerProvider, (prev, next) {
       final p = prev?.asData?.value;
@@ -445,7 +471,7 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
       );
     });
 
-    return Scaffold(
+    final gameBody = Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
         decoration: tableBackgroundDecoration(settings),
@@ -475,6 +501,10 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
                         ),
                         const Spacer(),
                         metricWidget(s.t('metricMoves'), '${state.moves}'),
+                        if (showTimer) ...[
+                          const Spacer(),
+                          metricWidget(s.t('time'), _timeText(_seconds)),
+                        ],
                         const Spacer(),
                         topCircleButton(
                           Icons.palette_rounded,
@@ -610,9 +640,19 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
                         badgePlay: false,
                       ),
                       (
+                        icon: Icons.auto_fix_high,
+                        label: s.t('autoFinish'),
+                        onTap: _controller.canAutoFinish() ? _onSpiderAutoFinish : null,
+                        badge: null,
+                        badgePlay: false,
+                      ),
+                      (
                         icon: Icons.style,
                         label: s.t('btnNewShort'),
-                        onTap: () => _controller.newGame(),
+                        onTap: () {
+                          _controller.newGame();
+                          setState(() => _seconds = 0);
+                        },
                         badge: null,
                         badgePlay: false,
                       ),
@@ -634,6 +674,25 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
         ),
       ),
     );
+
+    if (state.isWin) {
+      return Stack(
+        children: [
+          gameBody,
+          WinCelebration(
+            modeLabel: s.t('spider'),
+            moves: state.moves,
+            seconds: showTimer ? _seconds : 0,
+            onNewGame: () {
+              _controller.newGame();
+              setState(() => _seconds = 0);
+            },
+            onMenu: () => Navigator.pop(context),
+          ),
+        ],
+      );
+    }
+    return gameBody;
   }
 
   Widget _column(int column) {
@@ -653,26 +712,33 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
         _controller.moveRun(payload.fromColumn, payload.fromIndex, column);
       },
       builder: (context, candidate, rejected) {
-        return GestureDetector(
+        final isLegal = _dragFromColumn != null &&
+            _dragFromIndex != null &&
+            _controller.canMove(_dragFromColumn!, _dragFromIndex!, column);
+        final columnBody = GestureDetector(
           onTap: () {
             ref.read(soundServiceProvider).play(SoundEvent.cardTap);
             _controller.autoMoveTop(column);
           },
-          child: AnimatedContainer(
-            duration: _cardMoveDuration,
-            child: LayoutBuilder(
+                  child: AnimatedContainer(
+                    duration: _cardMoveDuration,
+                    constraints: const BoxConstraints(minHeight: double.infinity),
+                    child: LayoutBuilder(
               builder: (context, constraints) {
                 final columnCardWidth = constraints.maxWidth;
                 if (pile.isEmpty) {
-                  return SizedBox(
-                    width: columnCardWidth,
-                    height: _cardHeight,
-                    child: _hintGlowSpider(
-                      'hint_spider_t:$column',
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.white24),
-                          borderRadius: BorderRadius.circular(8),
+                  return Align(
+                    alignment: Alignment.topCenter,
+                    child: SizedBox(
+                      width: columnCardWidth,
+                      height: _cardHeight,
+                      child: _hintGlowSpider(
+                        'hint_spider_t:$column',
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.white24),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       ),
                     ),
@@ -695,6 +761,7 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
             ),
           ),
         );
+        return isLegal ? legalDropGlow(columnBody) : columnBody;
       },
     );
   }
@@ -949,9 +1016,9 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
       height: _cardHeight,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: back == 'red'
-              ? const [Color(0xFFA83A3A), Color(0xFF7A1D1D)]
-              : const [Color(0xFF2E5EA8), Color(0xFF1D4178)],
+          colors: cardBackGradientColors(back),
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.white70, width: 1.1),

@@ -6,10 +6,13 @@ class FreecellLoadedGame {
   const FreecellLoadedGame(
     this.state, {
     this.undoBudget = 5,
+    this.dailyYmd,
   });
   final FreecellState state;
   /// Бесплатные отмены за партию (добор через rewarded).
   final int undoBudget;
+  /// Дата `YYYY-MM-DD` ежедневной раздачи, если партия в режиме Daily.
+  final String? dailyYmd;
 }
 
 /// Сериализация состояния FreeCell для локального сохранения.
@@ -22,10 +25,12 @@ class FreecellPersistence {
   static Map<String, dynamic> toMap(
     FreecellState state, {
     int undoBudget = 5,
+    String? dailyYmd,
   }) {
     return {
       'version': _schemaVersion,
       'mode': _mode,
+      if (dailyYmd != null) 'dailyYmd': dailyYmd,
       'payload': {
         'moves': state.moves,
         'extraFreeCellSlots': state.extraFreeCellSlots,
@@ -61,6 +66,7 @@ class FreecellPersistence {
           (data['extraFreeCellSlots'] as int?)?.clamp(0, maxExtraFreeCells) ?? 0;
       // freeAutoFinishRemaining в старых сейвах — игнорируем, автодобор без лимита.
       final undoBudget = (data['undoBudget'] as int?)?.clamp(0, 999) ?? 5;
+      final dailyYmd = raw['dailyYmd'] as String?;
       final pendingRaw = data['freeExtraCellUnlockPending'] as bool?;
       final legacyBadge = data['extraCellBadgeRemaining'] as int?;
       // Старые сейвы: без поля — только при 0 добавок; badge 0 означал «нужна реклама для единственной ячейки».
@@ -102,6 +108,7 @@ class FreecellPersistence {
       return FreecellLoadedGame(
         result,
         undoBudget: undoBudget,
+        dailyYmd: dailyYmd,
       );
     } catch (_) {
       return null;

@@ -1,5 +1,14 @@
 import 'package:flutter/material.dart';
 
+/// Масштаб карт с учётом планшета (ширина ≥ 600 dp).
+double effectiveCardScale(double settingScale, BuildContext context) {
+  final shortest = MediaQuery.sizeOf(context).shortestSide;
+  var scale = settingScale;
+  if (shortest >= 600) scale *= 1.12;
+  if (shortest >= 900) scale *= 1.06;
+  return scale.clamp(0.8, 1.4);
+}
+
 /// Метрика в верхней панели (счёт, время, ходы).
 Widget metricWidget(String title, String value) {
   return Column(

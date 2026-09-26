@@ -2,7 +2,27 @@ import 'package:flutter/material.dart';
 
 import 'models/app_settings.dart';
 
-/// Единый фон «зелёное сукно» (как на экране Косынки) — для всех экранов приложения.
+/// Цвета рубашек карт — ключ это значение `cardBack` из настроек.
+const Map<String, List<Color>> cardBackColors = {
+  'blue': [Color(0xFF2E5EA8), Color(0xFF1D4178)],
+  'red': [Color(0xFFA83A3A), Color(0xFF7A1D1D)],
+  'gold': [Color(0xFFB8962E), Color(0xFF8A6F1A)],
+  'dark': [Color(0xFF2C2C3A), Color(0xFF15151E)],
+  'purple': [Color(0xFF6A3EA8), Color(0xFF4A1D78)],
+  'green': [Color(0xFF1FA463), Color(0xFF0F7A47)],
+};
+
+/// Цвета столов — ключ это `id` стиля `bg_*`.
+const Map<String, List<Color>> tableBgColors = {
+  'bg_green': [Color(0xFF1C7E3D), Color(0xFF0F5F34)],
+  'bg_blue': [Color(0xFF1B4F8A), Color(0xFF0E2E56)],
+  'bg_dark': [Color(0xFF111418), Color(0xFF07090B)],
+  'bg_cosmos': [Color(0xFF0D0D2B), Color(0xFF060614)],
+  'bg_wood': [Color(0xFF5C3A1E), Color(0xFF3A220E)],
+  'bg_gold': [Color(0xFF7A5C1E), Color(0xFF4F3A0E)],
+};
+
+/// Единый фон «зелёное сукно».
 const BoxDecoration kAppTableBackgroundDecoration = BoxDecoration(
   gradient: LinearGradient(
     colors: [Color(0xFF1C7E3D), Color(0xFF0F5F34)],
@@ -11,26 +31,22 @@ const BoxDecoration kAppTableBackgroundDecoration = BoxDecoration(
   ),
 );
 
+/// Возвращает градиент для рубашки по имени.
+List<Color> cardBackGradientColors(String back) {
+  return cardBackColors[back] ?? cardBackColors['blue']!;
+}
+
 /// Фон стола с учётом пользовательского стиля.
 BoxDecoration tableBackgroundDecoration(AppSettings? s) {
-  final style = s?.tableBackgroundStyle ?? TableBackgroundStyle.green;
-  return switch (style) {
-    TableBackgroundStyle.green => kAppTableBackgroundDecoration,
-    TableBackgroundStyle.blue => const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF1B4F8A), Color(0xFF0E2E56)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-    TableBackgroundStyle.dark => const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF111418), Color(0xFF07090B)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-  };
+  final bgId = s?.tableBackground ?? 'bg_green';
+  final colors = tableBgColors[bgId] ?? tableBgColors['bg_green']!;
+  return BoxDecoration(
+    gradient: LinearGradient(
+      colors: colors,
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+    ),
+  );
 }
 
 /// Фон нижнего листа выбора (полупрозрачный, в тон сукну).

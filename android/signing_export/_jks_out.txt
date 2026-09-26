@@ -1,0 +1,26 @@
+Alias name: solitaire
+Creation date: 10 ьр  2026 у.
+Entry type: PrivateKeyEntry
+Certificate chain length: 1
+Certificate[1]:
+Owner: CN=Betment Solitaire, OU=Betment, O=Betment, L=Unknown, ST=Unknown, C=RU
+Issuer: CN=Betment Solitaire, OU=Betment, O=Betment, L=Unknown, ST=Unknown, C=RU
+Serial number: 4a307be0
+Valid from: Sun May 10 14:20:29 IRKT 2026 until: Tue Apr 16 14:20:29 IRKT 2126
+Certificate fingerprints:
+	 SHA1: C0:B6:77:C3:84:D3:B8:0A:63:42:EB:5E:2B:8D:76:7E:3B:43:2D:A9
+	 SHA256: 60:5A:F6:AE:A2:5D:A7:24:14:70:C1:5F:83:DB:28:DA:A3:F1:85:44:B4:56:34:C5:E3:31:C9:A6:0E:C3:E2:C4
+Signature algorithm name: SHA256withRSA
+Subject Public Key Algorithm: 2048-bit RSA key
+Version: 3
+
+Extensions: 
+
+#1: ObjectId: 2.5.29.14 Criticality=false
+SubjectKeyIdentifier [
+KeyIdentifier [
+0000: C6 49 BB 79 97 89 37 61   8D CA 6A 44 F6 95 5C 2F  .I.y..7a..jD..\/
+0010: 2B 17 78 6D                                        +.xm
+]
+]
+

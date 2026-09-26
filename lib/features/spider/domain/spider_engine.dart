@@ -29,7 +29,6 @@ class SpiderEngine {
 
   SpiderState dealFromStock(SpiderState state) {
     if (state.stock.length < 10) return state;
-    if (state.tableau.any((pile) => pile.isEmpty)) return state;
 
     final nextStock = [...state.stock];
     final nextTableau = _cloneTableau(state.tableau);
@@ -157,6 +156,67 @@ class SpiderEngine {
 
   List<List<PlayingCard>> _cloneTableau(List<List<PlayingCard>> value) {
     return value.map((pile) => [...pile]).toList();
+  }
+
+  /// Возвращает список колонок, куда можно поместить верхнюю карту колонки [fromColumn].
+  List<int> getLegalTargets(SpiderState state, int fromColumn) {
+    final pile = state.tableau[fromColumn];
+    if (pile.isEmpty) return [];
+    final top = pile.last;
+    if (!top.faceUp) return [];
+    final targets = <int>[];
+    for (var to = 0; to < state.tableau.length; to++) {
+      if (to == fromColumn) continue;
+      final toPile = state.tableau[to];
+      final toTop = toPile.isEmpty ? null : toPile.last;
+      if (_canPlace(top, toTop)) {
+        targets.add(to);
+      }
+    }
+    return targets;
+  }
+
+  /// Возвращает список колонок с подсветкой для пустых слотов (любую карту можно положить на пустую колонку).
+  List<int> getEmptyColumnTargets() {
+    return List.generate(10, (i) => i);
+  }
+
+  /// Проверяет, можно ли автоматически завершить партию (есть ходы в пустые колонки).
+  bool canAutoFinish(SpiderState state) {
+    if (state.isWin) return false;
+    for (var from = 0; from < state.tableau.length; from++) {
+      final pile = state.tableau[from];
+      if (pile.isEmpty) continue;
+      for (var idx = pile.length - 1; idx >= 0; idx--) {
+        if (!pile[idx].faceUp) break;
+        if (!canDragRun(state, from, idx)) continue;
+        for (var to = 0; to < state.tableau.length; to++) {
+          if (to == from) continue;
+          final moved = moveRun(state, from, idx, to);
+          if (!identical(moved, state)) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /// Автозавершение: повторяет первые доступные ходы, пока есть (лимит шагов).
+  SpiderState autoFinishAll(SpiderState state) {
+    if (!canAutoFinish(state)) return state;
+    var current = state;
+    for (var step = 0; step < 500; step++) {
+      final tag = hint(current);
+      if (tag == null || tag == 'spider_deal_stock') break;
+      final parts = tag.split('_');
+      if (parts.length < 5) break;
+      final from = int.parse(parts[2]);
+      final idx = int.parse(parts[3]);
+      final to = int.parse(parts[5]);
+      final next = moveRun(current, from, idx, to);
+      if (identical(next, current)) break;
+      current = next;
+    }
+    return current;
   }
 
   /// Первый доступный ход: перенос стопки или сдача из колоды (если разрешена).

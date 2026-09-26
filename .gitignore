@@ -50,3 +50,7 @@ app.*.map.json
 .cursor/
 .proxyai/
 .gigacode/
+
+# Служебный gradle-проект и артефакты сборки
+/verify_registration/
+/android/build/

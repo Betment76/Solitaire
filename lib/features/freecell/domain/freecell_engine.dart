@@ -255,6 +255,95 @@ class FreecellEngine {
     return state;
   }
 
+  /// Возвращает список колонок табло, куда можно положить карту из [fromCol].
+  List<int> getLegalTableauTargets(FreecellState state, int fromCol) {
+    final pile = state.tableau[fromCol];
+    if (pile.isEmpty) return [];
+    final top = pile.last;
+    final targets = <int>[];
+    for (var to = 0; to < state.tableau.length; to++) {
+      if (to == fromCol) continue;
+      final toPile = state.tableau[to];
+      final target = toPile.isEmpty ? null : toPile.last;
+      if (_canPlaceOnTableau(top, target)) {
+        targets.add(to);
+      }
+    }
+    return targets;
+  }
+
+  /// Возвращает список free cell индексов, которые пусты (можно положить карту).
+  List<int> getEmptyFreeCells(FreecellState state) {
+    final cells = <int>[];
+    for (var i = 0; i < state.freeCells.length; i++) {
+      if (state.freeCells[i] == null) cells.add(i);
+    }
+    return cells;
+  }
+
+  /// Даёт подсказку: возвращает описание лучшего хода или null.
+  /// Приоритет: ход в foundation > разблокировка самой большой карты > создание пустой колонки.
+  /// Возвращает строку вида "Перенесите ♥A из колонки 3 в foundation" или null.
+  String? hint(FreecellState state) {
+    if (state.isWin) return null;
+
+    // 1. Ход в foundation
+    for (var c = 0; c < state.tableau.length; c++) {
+      final pile = state.tableau[c];
+      if (pile.isEmpty) continue;
+      if (_canMoveToFoundation(pile.last, state.foundations[pile.last.suit]!)) {
+        return 'Перенесите ${_cardName(pile.last)} из колонки ${c + 1} в foundation';
+      }
+    }
+    for (var i = 0; i < state.freeCells.length; i++) {
+      final card = state.freeCells[i];
+      if (card == null) continue;
+      if (_canMoveToFoundation(card, state.foundations[card.suit]!)) {
+        return 'Перенесите ${_cardName(card)} из ячейки ${i + 1} в foundation';
+      }
+    }
+
+    // 2. Поиск разблокировки самой большой закрытой карты
+    // Сначала ищем карты, которые можно переместить на пустую колонку
+    final emptyCols = <int>[];
+    for (var c = 0; c < state.tableau.length; c++) {
+      if (state.tableau[c].isEmpty) emptyCols.add(c);
+    }
+
+    // 3. Ход на tableau: ищем карту, которую можно куда-то положить
+    for (var c = 0; c < state.tableau.length; c++) {
+      final pile = state.tableau[c];
+      if (pile.isEmpty) continue;
+      final targets = getLegalTableauTargets(state, c);
+      if (targets.isNotEmpty) {
+        return 'Перенесите ${_cardName(pile.last)} из колонки ${c + 1} в колонку ${targets.first + 1}';
+      }
+    }
+
+    // 4. Ход в свободную ячейку
+    final emptyCells = getEmptyFreeCells(state);
+    if (emptyCells.isNotEmpty) {
+      for (var c = 0; c < state.tableau.length; c++) {
+        if (state.tableau[c].isNotEmpty) {
+          return 'Положите ${_cardName(state.tableau[c].last)} из колонки ${c + 1} в ячейку ${emptyCells.first + 1}';
+        }
+      }
+    }
+
+    return null;
+  }
+
+  String _cardName(PlayingCard card) {
+    const ranks = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+    const suits = {
+      CardSuit.hearts: '♥',
+      CardSuit.diamonds: '♦',
+      CardSuit.clubs: '♣',
+      CardSuit.spades: '♠',
+    };
+    return '${ranks[card.rank]}${suits[card.suit]}';
+  }
+
   /// Проверяет, есть ли хотя бы один ход в foundation.
   bool canAutoFinish(FreecellState state) {
     if (state.isWin) return false;

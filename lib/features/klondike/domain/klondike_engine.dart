@@ -302,6 +302,31 @@ class KlondikeEngine {
     return moving.color != targetTop.color && moving.rank == targetTop.rank - 1;
   }
 
+  /// Возвращает индексы колонок табло, куда можно положить [card].
+  Set<int> getLegalTableauTargets(KlondikeState state, PlayingCard card) {
+    final targets = <int>{};
+    for (var i = 0; i < state.tableau.length; i++) {
+      final pile = state.tableau[i];
+      final top = pile.isEmpty ? null : pile.last;
+      if (_canPlaceOnTableau(card, top)) {
+        targets.add(i);
+      }
+    }
+    return targets;
+  }
+
+  /// Возвращает масти foundation, куда можно положить [card].
+  Set<CardSuit> getLegalFoundationTargets(KlondikeState state, PlayingCard card) {
+    final targets = <CardSuit>{};
+    for (final suit in CardSuit.values) {
+      final foundation = state.foundations[suit]!;
+      if (_canMoveToFoundation(card, foundation)) {
+        targets.add(suit);
+      }
+    }
+    return targets;
+  }
+
   /// Проверка, что переносимая последовательность корректна по правилам Косынки.
   bool _isValidRun(List<PlayingCard> run) {
     if (run.any((card) => !card.faceUp)) return false;

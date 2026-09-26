@@ -21,6 +21,12 @@ class SpiderController extends AsyncNotifier<SpiderState> {
 
   /// Бесплатные отмены за текущую партию (добор через rewarded).
   int _undoBudget = 5;
+  /// Был ли хоть раз использован Undo за эту партию.
+  bool _usedUndo = false;
+  /// Количество мастей в текущей партии (для проверки испытаний).
+  int _currentSuitCount = 1;
+  /// Секунды с экрана (для рекордов и экрана победы).
+  int elapsedSeconds = 0;
   /// Бесплатные подсказки за партию (добор через rewarded).
   int _freeHintsRemaining = 3;
 
@@ -40,11 +46,14 @@ class SpiderController extends AsyncNotifier<SpiderState> {
     _redo.clear();
     if (restored != null) {
       _undoBudget = restored.undoBudget;
+      _usedUndo = false;
       _freeHintsRemaining = restored.freeHintsRemaining;
       return restored.state;
     }
     _undoBudget = 5;
+    _usedUndo = false;
     _freeHintsRemaining = 3;
+    _currentSuitCount = appSettings.spiderSuitCount;
     return _engine.newGame(
       seed: DateTime.now().millisecondsSinceEpoch,
       suitCount: appSettings.spiderSuitCount,
@@ -65,7 +74,9 @@ class SpiderController extends AsyncNotifier<SpiderState> {
     _undo.clear();
     _redo.clear();
     _undoBudget = 5;
+    _usedUndo = false;
     _freeHintsRemaining = 3;
+    _currentSuitCount = appSettings.spiderSuitCount;
     state = AsyncData(next);
     await _persist(next);
     unawaited(reportGameStart(SolitaireVariant.spider, spiderSuitCount: appSettings.spiderSuitCount));
@@ -99,6 +110,7 @@ class SpiderController extends AsyncNotifier<SpiderState> {
     if (current == null || _undo.isEmpty) return;
     if (_undoBudget <= 0) return;
     _undoBudget--;
+    _usedUndo = true;
     final prev = _undo.removeLast();
     _redo.add(current);
     state = AsyncData(prev);
@@ -155,11 +167,32 @@ class SpiderController extends AsyncNotifier<SpiderState> {
     return !identical(next, current);
   }
 
+  void syncElapsed(int seconds) => elapsedSeconds = seconds;
+
+  bool canAutoFinish() {
+    final current = state.asData?.value;
+    if (current == null) return false;
+    return _engine.canAutoFinish(current);
+  }
+
+  Future<void> autoFinishAll() async {
+    final current = state.asData?.value;
+    if (current == null) return;
+    final next = _engine.autoFinishAll(current);
+    _apply(current, next);
+  }
+
   void _apply(SpiderState current, SpiderState next) {
     if (identical(next, current)) return;
     if (!current.isWin && next.isWin) {
       ref.read(soundServiceProvider).play(SoundEvent.win);
-      unawaited(ref.read(statsProvider.notifier).recordGameWin(SolitaireVariant.spider));
+      unawaited(ref.read(statsProvider.notifier).recordGameWin(
+        SolitaireVariant.spider,
+        moves: next.moves,
+        elapsedSeconds: elapsedSeconds,
+        usedUndo: _usedUndo,
+        spiderSuitCount: _currentSuitCount,
+      ));
     }
     _undo.add(current);
     _redo.clear();

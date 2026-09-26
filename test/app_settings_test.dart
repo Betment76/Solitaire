@@ -10,14 +10,21 @@ void main() {
     expect(s.spiderSuitCount, 1);
     expect(s.dealSpeed, DealSpeed.normal);
     expect(s.themeMode, ThemeMode.system);
+    expect(s.showTimer, isTrue);
   });
 
   test('AppSettings copyWith частично меняет поля', () {
     const s = AppSettings();
-    final n = s.copyWith(languageCode: 'en', klondikeDrawCount: 3, soundOn: false);
+    final n = s.copyWith(
+      languageCode: 'en',
+      klondikeDrawCount: 3,
+      soundOn: false,
+      showTimer: false,
+    );
     expect(n.languageCode, 'en');
     expect(n.klondikeDrawCount, 3);
     expect(n.soundOn, isFalse);
+    expect(n.showTimer, isFalse);
     expect(n.vibrationOn, s.vibrationOn);
     expect(n.spiderSuitCount, s.spiderSuitCount);
   });

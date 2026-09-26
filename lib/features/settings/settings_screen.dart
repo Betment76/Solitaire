@@ -77,6 +77,13 @@ class SettingsScreen extends ConsumerWidget {
                 onChanged: (v) => save(data.copyWith(vibrationOn: v)),
               ),
               const SizedBox(height: 6),
+              SwitchListTile(
+                title: Text(s.t('showTimer')),
+                subtitle: Text(s.t('showTimerHint')),
+                value: data.showTimer,
+                onChanged: (v) => save(data.copyWith(showTimer: v)),
+              ),
+              const SizedBox(height: 6),
               _ChoiceField(
                 label: s.t('dealSpeed'),
                 valueText: switch (data.dealSpeed) {

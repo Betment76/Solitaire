@@ -5,10 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/freecell/freecell_screen.dart';
 import '../features/klondike/klondike_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/stats/stats_screen.dart';
 import '../features/style/style_screen.dart';
 import '../features/solitaire_selector/selector_screen.dart';
 import '../features/spider/spider_screen.dart';
-import '../features/stats/stats_screen.dart';
+import '../features/achievements/achievements_screen.dart';
+import '../features/challenges/challenge_screen.dart';
+import '../shared/widgets/unlock_overlay.dart';
 import 'l10n/app_strings.dart';
 import 'providers.dart';
 
@@ -67,7 +70,15 @@ class SolitaireApp extends ConsumerWidget {
         '/stats': (_) => const StatsScreen(),
         '/settings': (_) => const SettingsScreen(),
         '/style': (_) => const StyleScreen(),
+        '/achievements': (_) => const AchievementsScreen(),
+        '/challenges': (_) => const ChallengeScreen(),
       },
+      builder: (context, child) => Stack(
+        children: [
+          if (child != null) child,
+          const UnlockOverlay(),
+        ],
+      ),
     );
   }
 }
