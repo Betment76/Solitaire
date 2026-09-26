@@ -72,7 +72,7 @@ void main() {
 
       expect(controller.freeHintsRemaining, 3);
       final r = controller.takeHintOrPrepareReward();
-      expect(r.noMoves || r.tag != null || r.needsReward, isTrue);
+      expect(r.noMoves || r.hint != null || r.needsReward, isTrue);
     });
 
     test('grantHintFromReward увеличивает подсказки', () async {

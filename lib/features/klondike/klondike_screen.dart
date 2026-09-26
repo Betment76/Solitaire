@@ -7,10 +7,10 @@ import '../../core/ads/yandex_rewarded.dart';
 import '../../core/app_table_background.dart';
 import '../../core/audio/sound_service.dart';
 import '../../core/l10n/app_strings.dart';
-import '../../core/models/app_settings.dart';
 import '../../core/providers.dart';
 import '../../shared/widgets/game_ui_common.dart';
 import '../../shared/widgets/legal_drop_glow.dart';
+import '../../shared/widgets/playing_card_view.dart';
 import '../../shared/widgets/win_celebration.dart';
 import '../../shared/widgets/yandex_sticky_banner.dart';
 import 'domain/card.dart';
@@ -159,40 +159,25 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
     return child;
   }
 
-  /// Какие области подсветить по тегу из движка [KlondikeEngine.hint].
-  Set<String> _hintKeysForTag(String tag) {
+  /// Какие области подсветить по подсказке из движка.
+  Set<String> _hintKeysForHint(KlondikeHint hint) {
     final st = _state;
-    if (tag == 'draw_from_stock') {
-      return {'hint_stock'};
-    }
-    if (tag == 'waste_to_foundation') {
-      if (st.waste.isEmpty) return {};
-      return {'hint_waste', 'hint_f:${st.waste.last.suit.name}'};
-    }
-    if (tag.startsWith('waste_to_tableau_')) {
-      final col = int.tryParse(tag.substring('waste_to_tableau_'.length));
-      if (col == null) return {};
-      return {'hint_waste', 'hint_t:$col'};
-    }
-    if (tag.startsWith('tableau_to_foundation_')) {
-      final col = int.tryParse(tag.substring('tableau_to_foundation_'.length));
-      if (col == null || st.tableau[col].isEmpty) return {};
-      final top = st.tableau[col].last;
-      return {'hint_t:$col', 'hint_f:${top.suit.name}'};
-    }
-    final runMatch = RegExp(r'^tableau_run_(\d+)_(\d+)_to_(\d+)$').firstMatch(tag);
-    if (runMatch != null) {
-      final from = int.parse(runMatch.group(1)!);
-      final startIdx = int.parse(runMatch.group(2)!);
-      final to = int.parse(runMatch.group(3)!);
-      final keys = <String>{'hint_t:$to'};
-      final fpile = st.tableau[from];
-      for (var i = startIdx; i < fpile.length; i++) {
-        keys.add('hint_card:$from:$i');
-      }
-      return keys;
-    }
-    return {};
+    return switch (hint) {
+      HintDrawFromStock() => {'hint_stock'},
+      HintWasteToFoundation() => st.waste.isEmpty
+          ? {}
+          : {'hint_waste', 'hint_f:${st.waste.last.suit.name}'},
+      HintWasteToTableau(:final column) => {'hint_waste', 'hint_t:$column'},
+      HintTableauToFoundation(:final column) =>
+        st.tableau[column].isEmpty
+            ? {}
+            : {'hint_t:$column', 'hint_f:${st.tableau[column].last.suit.name}'},
+      HintTableauRun(:final fromColumn, :final fromCardIndex, :final toColumn) => {
+          'hint_t:$toColumn',
+          for (var i = fromCardIndex; i < st.tableau[fromColumn].length; i++)
+            'hint_card:$fromColumn:$i',
+        },
+    };
   }
 
   /// Три моргания жёлтым по целям подсказки.
@@ -216,21 +201,22 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
     });
   }
 
-  void _flashHintFromTag(String? tag) {
-    if (tag == null) return;
-    final keys = _hintKeysForTag(tag);
+  void _flashHintFromTag(KlondikeHint? hint) {
+    if (hint == null) return;
+    final keys = _hintKeysForHint(hint);
     if (keys.isEmpty) return;
     unawaited(_runHintBlink(keys));
   }
 
-  String _hintMessage(AppStrings s, String? tag) {
-    if (tag == null) return s.t('hintNone');
-    if (tag == 'draw_from_stock') return s.t('hintDrawFromStock');
-    if (tag == 'waste_to_foundation') return s.t('hintWasteToFoundation');
-    if (tag.startsWith('waste_to_tableau_')) return s.t('hintWasteToTableau');
-    if (tag.startsWith('tableau_to_foundation_')) return s.t('hintWasteToFoundation');
-    if (tag.startsWith('tableau_run_')) return s.t('hintTableauToTableau');
-    return s.t('hintNone');
+  String _hintMessage(AppStrings s, KlondikeHint? hint) {
+    if (hint == null) return s.t('hintNone');
+    return switch (hint) {
+      HintDrawFromStock() => s.t('hintDrawFromStock'),
+      HintWasteToFoundation() => s.t('hintWasteToFoundation'),
+      HintWasteToTableau() => s.t('hintWasteToTableau'),
+      HintTableauToFoundation() => s.t('hintWasteToFoundation'),
+      HintTableauRun() => s.t('hintTableauToTableau'),
+    };
   }
 
   Future<void> _onHintPressed() async {
@@ -264,9 +250,9 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.t('hintNone')), behavior: SnackBarBehavior.floating));
         return;
       }
-      _flashHintFromTag(r.tag);
+      _flashHintFromTag(r.hint);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_hintMessage(s, r.tag)), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 3)),
+        SnackBar(content: Text(_hintMessage(s, r.hint)), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 3)),
       );
     } finally {
       // Счётчик подсказок не в KlondikeState — перерисовка панели после расхода.
@@ -504,16 +490,16 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
                                 alignment: Alignment.topCenter,
                                 child: switch (i) {
                                   0 => _topSlot(
-                                    child: _foundationCard('hearts'),
+                                    child: _foundationCard(CardSuit.hearts),
                                   ),
                                   1 => _topSlot(
-                                    child: _foundationCard('diamonds'),
+                                    child: _foundationCard(CardSuit.diamonds),
                                   ),
                                   2 => _topSlot(
-                                    child: _foundationCard('clubs'),
+                                    child: _foundationCard(CardSuit.clubs),
                                   ),
                                   3 => _topSlot(
-                                    child: _foundationCard('spades'),
+                                    child: _foundationCard(CardSuit.spades),
                                   ),
                                   5 => _topSlot(
                                     child: _state.waste.isEmpty
@@ -536,21 +522,17 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
                                               final right = _state.drawCount == 3
                                                   ? 10.0 * index
                                                   : 0.0;
-                                              final cardWidget = _playingCard(
-                                                rank: card.rank,
-                                                suitName: card.suit.name,
-                                                faceUp: true,
-                                              );
+                                              final cardWidget = PlayingCardView(card: card);
                                               final wasteW = _tableauCardWidth(context);
                                               return Positioned(
                                                 right: right,
                                                 width: wasteW,
                                                 child: isTop
                                                     ? Draggable<_DragPayload>(
-                                                        data: _DragPayload.fromWaste(card.suit.name),
+                                                        data: _DragPayload.fromWaste(card.suit),
                                                         dragAnchorStrategy: pointerDragAnchorStrategy,
                                                         onDragStarted: () => setState(() {
-                                                          _activeDragPayload = _DragPayload.fromWaste(card.suit.name);
+                                                          _activeDragPayload = _DragPayload.fromWaste(card.suit);
                                                         }),
                                                         onDragEnd: (_) => setState(() {
                                                           _dragFromColumn = null;
@@ -744,7 +726,7 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
   }
 
   // Подложка для дома: показываем метку туза, чтобы слот читался как foundation.
-  Widget _emptyFoundationCard(String suitName, {Key? key}) {
+  Widget _emptyFoundationCard(CardSuit suit, {Key? key}) {
     return Container(
       key: key,
       height: _cardHeight,
@@ -772,7 +754,7 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
       children: [
         _state.stock.isEmpty
             ? _emptyTopCard()
-            : _playingCard(rank: 0, suitName: 'back', faceUp: false),
+            : const PlayingCardView.back(),
         Positioned(
           left: 4,
           bottom: 4,
@@ -796,20 +778,19 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
     );
   }
 
-  Widget _foundationCard(String suitName) {
-    final suit = _suitFromName(suitName);
+  Widget _foundationCard(CardSuit suit) {
     final pile = _state.foundations[suit]!;
     return DragTarget<_DragPayload>(
       onWillAcceptWithDetails: (details) =>
-          _canDropToFoundation(details.data, suitName),
+          _canDropToFoundation(details.data, suit),
       onAcceptWithDetails: (details) =>
-          _dropToFoundation(details.data, suitName),
+          _dropToFoundation(details.data, suit),
       builder: (context, candidateData, rejectedData) {
         final hasHover = candidateData.isNotEmpty;
         final slotWithCard = Stack(
           fit: StackFit.expand,
           children: [
-            _emptyFoundationCard(suitName, key: ValueKey('empty-$suitName')),
+            _emptyFoundationCard(suit, key: ValueKey('empty-${suit.name}')),
             if (pile.isNotEmpty)
               AnimatedSwitcher(
                 duration: _cardMoveDuration,
@@ -824,11 +805,9 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
                     child: FadeTransition(opacity: animation, child: child),
                   );
                 },
-                child: _playingCard(
+                child: PlayingCardView(
                   key: ValueKey('f-${pile.last.suit.name}-${pile.last.rank}'),
-                  rank: pile.last.rank,
-                  suitName: pile.last.suit.name,
-                  faceUp: true,
+                  card: pile.last,
                 ),
               ),
           ],
@@ -837,11 +816,11 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
         // Подсветка легальной цели при drag-and-drop
         final bool isLegalDropTarget =
             _activeDragPayload != null &&
-                _canDropToFoundation(_activeDragPayload!, suitName);
+                _canDropToFoundation(_activeDragPayload!, suit);
 
         if (pile.isEmpty) {
           final w = _hintGlow(
-            'hint_f:$suitName',
+            'hint_f:${suit.name}',
             AnimatedScale(
               duration: const Duration(milliseconds: 160),
               scale: hasHover ? 1.05 : 1,
@@ -852,12 +831,12 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
         }
         final top = pile.last;
         final w = _hintGlow(
-          'hint_f:$suitName',
+          'hint_f:${suit.name}',
           Draggable<_DragPayload>(
-          data: _DragPayload.fromFoundation(top.suit.name),
+          data: _DragPayload.fromFoundation(top.suit),
           dragAnchorStrategy: pointerDragAnchorStrategy,
           onDragStarted: () => setState(() {
-            _activeDragPayload = _DragPayload.fromFoundation(top.suit.name);
+            _activeDragPayload = _DragPayload.fromFoundation(top.suit);
           }),
           onDragEnd: (_) => setState(() {
             _dragFromColumn = null;
@@ -878,11 +857,9 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
             SizedBox(
               width: _cardWidth,
               height: _cardHeight,
-              child: _playingCard(
+              child: PlayingCardView(
                 key: ValueKey('f-drag-${top.suit.name}-${top.rank}'),
-                rank: top.rank,
-                suitName: top.suit.name,
-                faceUp: true,
+                card: top,
               ),
             ),
           ),
@@ -970,11 +947,7 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
     final card = pile[idx];
     final isPulseTarget =
         _dropPulseColumn == columnIndex && idx == pile.length - 1;
-    final cardWidget = _playingCard(
-      rank: card.rank,
-      suitName: card.suit.name,
-      faceUp: card.faceUp,
-    );
+    final cardWidget = PlayingCardView(card: card);
     final pulsedCardWidget = AnimatedScale(
       duration: const Duration(milliseconds: 150),
       curve: Curves.easeOutCubic,
@@ -1014,22 +987,18 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
               top: i * _tableauStep,
               left: 0,
               right: 0,
-              child: _playingCard(
-                rank: run[i].rank,
-                suitName: run[i].suit.name,
-                faceUp: run[i].faceUp,
-              ),
+              child: PlayingCardView(card: run[i]),
             ),
         ],
       ),
     );
     return Draggable<_DragPayload>(
-      data: _DragPayload.fromTableau(columnIndex, idx, card.suit.name),
+      data: _DragPayload.fromTableau(columnIndex, idx, card.suit),
       dragAnchorStrategy: pointerDragAnchorStrategy,
           onDragStarted: () => setState(() {
             _dragFromColumn = columnIndex;
             _dragFromCardIndex = idx;
-            _activeDragPayload = _DragPayload.fromTableau(columnIndex, idx, run[0].suit.name);
+            _activeDragPayload = _DragPayload.fromTableau(columnIndex, idx, run[0].suit);
           }),
       onDragEnd: (_) => setState(() {
         _dragFromColumn = null;
@@ -1080,290 +1049,67 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
     );
   }
 
-  /// Карточный виджет: лицевая сторона + рубашка для закрытых карт.
-  Widget _playingCard({
-    Key? key,
-    required int rank,
-    required String suitName,
-    required bool faceUp,
-  }) {
-    final settings = ref.read(settingsProvider).asData?.value;
-    if (!faceUp) {
-      // Рубашка карты зависит от выбранного стиля.
-      final back = settings?.cardBack ?? 'blue';
-      return Container(
-        key: key,
-        height: _cardHeight,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: cardBackGradientColors(back),
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white70, width: 1.2),
-          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 3)],
-        ),
-        child: const SizedBox.shrink(),
-      );
-    }
-
-    final isRed = suitName == 'hearts' || suitName == 'diamonds';
-    final rankText = _rankLabel(rank);
-    final suitText = _suitSymbol(suitName);
-    final faceStyle = settings?.cardFaceStyle ?? CardFaceStyle.classic;
-    final ink = isRed ? const Color(0xFFB42020) : const Color(0xFF1B1B1B);
-    return Container(
-      key: key,
-      height: _cardHeight,
-      // В minimal используем нулевой внутренний отступ:
-      // ранг позиционируем вручную, масть ставим строго по центру карты.
-      padding: faceStyle == CardFaceStyle.minimal
-          ? EdgeInsets.zero
-          : const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 3)],
-      ),
-      child: faceStyle == CardFaceStyle.minimal
-          ? Stack(
-              children: [
-                // В минимале: ранг и масть слева сверху в ряд, крупная масть по центру.
-                Positioned(
-                  left: 4,
-                  top: 0,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        rankText,
-                        style: TextStyle(
-                          color: ink,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 19,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 3),
-                        child: Text(
-                          suitText,
-                          style: TextStyle(
-                            color: ink,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.center,
-                  child: Text(
-                    suitText,
-                    style: TextStyle(
-                      color: ink.withValues(alpha: 0.24),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 28,
-                    ),
-                  ),
-                ),
-              ],
-            )
-          : Stack(
-              children: [
-                Text(
-                  '$rankText\n$suitText',
-                  style: TextStyle(
-                    color: ink,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
-                    height: 1.0,
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.center,
-                  child: Text(
-                    suitText,
-                    style: TextStyle(
-                      color: ink.withValues(alpha: 0.32),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 26,
-                    ),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Transform.rotate(
-                    angle: 3.1415926,
-                    child: Text(
-                      '$rankText\n$suitText',
-                      style: TextStyle(
-                        color: ink,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
-                        height: 1.0,
-                      ),
-                      textAlign: TextAlign.right,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-    );
-  }
-
-  CardSuit _suitFromName(String suitName) {
-    switch (suitName) {
-      case 'hearts':
-        return CardSuit.hearts;
-      case 'diamonds':
-        return CardSuit.diamonds;
-      case 'clubs':
-        return CardSuit.clubs;
-      case 'spades':
-      default:
-        return CardSuit.spades;
-    }
-  }
-
+  /// Проверки легальности дропа — через контроллер (правила исполняются там).
   bool _canDropToTableau(_DragPayload payload, int toColumn) {
-    return !identical(_previewDropToTableau(payload, toColumn), _state);
-  }
-
-  KlondikeState _previewDropToTableau(_DragPayload payload, int toColumn) {
-    if (payload.source == _DragSource.waste) {
-      return _engineMoveWasteToTableau(_state, toColumn);
-    }
-    if (payload.source == _DragSource.foundation) {
-      return _engineMoveFoundationToTableau(
-        _state,
-        _suitFromName(payload.suitName),
-        toColumn,
-      );
-    }
-    if (payload.source == _DragSource.tableau && payload.fromColumn != null) {
-      return _engineMoveTableauRunToTableau(
-        _state,
-        payload.fromColumn!,
-        payload.fromCardIndex ?? 0,
-        toColumn,
-      );
-    }
-    return _state;
+    return switch (payload.source) {
+      _DragSource.waste => _controller.canMoveWasteToTableau(toColumn),
+      _DragSource.foundation =>
+          _controller.canMoveFoundationToTableau(payload.suit, toColumn),
+      _DragSource.tableau => payload.fromColumn != null &&
+          _controller.canMoveTableauRunToTableau(
+            payload.fromColumn!,
+            payload.fromCardIndex ?? 0,
+            toColumn,
+          ),
+    };
   }
 
   void _dropToTableau(_DragPayload payload, int toColumn) {
-    final next = _previewDropToTableau(payload, toColumn);
-    if (identical(next, _state)) return;
+    if (!_canDropToTableau(payload, toColumn)) return;
     ref.read(soundServiceProvider).play(SoundEvent.cardSlide);
-    _applyMove(next);
+    switch (payload.source) {
+      case _DragSource.waste:
+        _controller.moveWasteToTableau(toColumn);
+      case _DragSource.foundation:
+        _controller.moveFoundationToTableau(payload.suit, toColumn);
+      case _DragSource.tableau when payload.fromColumn != null:
+        _controller.moveTableauRunToTableau(
+          payload.fromColumn!,
+          payload.fromCardIndex ?? 0,
+          toColumn,
+        );
+      default:
+        return;
+    }
+    _resetDragState();
     _triggerDropPulse(toColumn);
   }
 
-  bool _canDropToFoundation(_DragPayload payload, String suitName) {
-    if (payload.suitName != suitName) return false;
-    return !identical(_previewDropToFoundation(payload), _state);
+  bool _canDropToFoundation(_DragPayload payload, CardSuit suit) {
+    if (payload.suit != suit) return false;
+    return switch (payload.source) {
+      _DragSource.waste => _controller.canMoveWasteToFoundation(),
+      _DragSource.tableau => payload.fromColumn != null &&
+          (payload.fromCardIndex == null ||
+              payload.fromCardIndex ==
+                  _state.tableau[payload.fromColumn!].length - 1) &&
+          _controller.canMoveTableauTopToFoundation(payload.fromColumn!),
+      _ => false,
+    };
   }
 
-  KlondikeState _previewDropToFoundation(_DragPayload payload) {
-    if (payload.source == _DragSource.waste) {
-      return _engineMoveWasteToFoundation(_state);
-    }
-    if (payload.source == _DragSource.tableau && payload.fromColumn != null) {
-      final fromPile = _state.tableau[payload.fromColumn!];
-      final fromCardIndex = payload.fromCardIndex ?? fromPile.length - 1;
-      if (fromCardIndex != fromPile.length - 1) return _state;
-      return _engineMoveTableauTopToFoundation(_state, payload.fromColumn!);
-    }
-    return _state;
-  }
-
-  void _dropToFoundation(_DragPayload payload, String suitName) {
-    if (payload.suitName != suitName) return;
+  void _dropToFoundation(_DragPayload payload, CardSuit suit) {
+    if (!_canDropToFoundation(payload, suit)) return;
     ref.read(soundServiceProvider).play(SoundEvent.cardToFoundation);
-    _applyMove(_previewDropToFoundation(payload));
-  }
-
-  void _applyMove(KlondikeState next) {
+    switch (payload.source) {
+      case _DragSource.waste:
+        _controller.moveWasteToFoundation();
+      case _DragSource.tableau when payload.fromColumn != null:
+        _controller.moveTableauTopToFoundation(payload.fromColumn!);
+      default:
+        return;
+    }
     _resetDragState();
-    if (identical(next, _state)) return;
-    _controller.applyFromScreen(_state, next);
-  }
-
-  KlondikeState _engineMoveWasteToTableau(KlondikeState s, int toColumn) {
-    final engine = KlondikeEngine();
-    return engine.moveWasteToTableau(s, toColumn);
-  }
-
-  KlondikeState _engineMoveFoundationToTableau(
-    KlondikeState s,
-    CardSuit suit,
-    int toColumn,
-  ) {
-    final engine = KlondikeEngine();
-    return engine.moveFoundationToTableau(s, suit, toColumn);
-  }
-
-  KlondikeState _engineMoveTableauRunToTableau(
-    KlondikeState s,
-    int fromColumn,
-    int fromCardIndex,
-    int toColumn,
-  ) {
-    final engine = KlondikeEngine();
-    return engine.moveTableauRunToTableau(
-      s,
-      fromColumn,
-      fromCardIndex,
-      toColumn,
-    );
-  }
-
-  KlondikeState _engineMoveWasteToFoundation(KlondikeState s) {
-    final engine = KlondikeEngine();
-    return engine.moveWasteToFoundation(s);
-  }
-
-  KlondikeState _engineMoveTableauTopToFoundation(
-    KlondikeState s,
-    int fromColumn,
-  ) {
-    final engine = KlondikeEngine();
-    return engine.moveTableauTopToFoundation(s, fromColumn);
-  }
-
-  /// Подпись ранга карты в классическом формате.
-  String _rankLabel(int rank) {
-    switch (rank) {
-      case 1:
-        return 'A';
-      case 11:
-        return 'J';
-      case 12:
-        return 'Q';
-      case 13:
-        return 'K';
-      default:
-        return '$rank';
-    }
-  }
-
-  /// Символ масти для красивого отображения карты.
-  String _suitSymbol(String suitName) {
-    switch (suitName) {
-      case 'hearts':
-        return '♥';
-      case 'diamonds':
-        return '♦';
-      case 'clubs':
-        return '♣';
-      case 'spades':
-        return '♠';
-      default:
-        return '?';
-    }
   }
 }
 
@@ -1372,34 +1118,34 @@ enum _DragSource { waste, tableau, foundation }
 class _DragPayload {
   const _DragPayload({
     required this.source,
-    required this.suitName,
+    required this.suit,
     this.fromColumn,
     this.fromCardIndex,
   });
 
   final _DragSource source;
-  final String suitName;
+  final CardSuit suit;
   final int? fromColumn;
   final int? fromCardIndex;
 
-  factory _DragPayload.fromWaste(String suitName) {
-    return _DragPayload(source: _DragSource.waste, suitName: suitName);
+  factory _DragPayload.fromWaste(CardSuit suit) {
+    return _DragPayload(source: _DragSource.waste, suit: suit);
   }
 
   factory _DragPayload.fromTableau(
     int fromColumn,
     int fromCardIndex,
-    String suitName,
+    CardSuit suit,
   ) {
     return _DragPayload(
       source: _DragSource.tableau,
       fromColumn: fromColumn,
       fromCardIndex: fromCardIndex,
-      suitName: suitName,
+      suit: suit,
     );
   }
 
-  factory _DragPayload.fromFoundation(String suitName) {
-    return _DragPayload(source: _DragSource.foundation, suitName: suitName);
+  factory _DragPayload.fromFoundation(CardSuit suit) {
+    return _DragPayload(source: _DragSource.foundation, suit: suit);
   }
 }

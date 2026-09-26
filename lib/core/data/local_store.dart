@@ -17,6 +17,7 @@ class LocalStore {
   static const _kGameKlondike = 'game_state_klondike';
   static const _kGameSpider = 'game_state_spider';
   static const _kGameFreecell = 'game_state_freecell';
+  static const _kRecords = 'records';
   static const _kDailyKlondikeMoves = 'daily_klondike_best_moves';
   static const _kChallenges = 'challenges';
   static const _kAchievements = 'achievements';
@@ -25,6 +26,8 @@ class LocalStore {
   static const _kFreecellBestMoves = 'daily_freecell_best_moves';
   static const _kFreecellBestTimes = 'daily_freecell_best_times';
   static const _kKlondikeBestTimes = 'daily_klondike_best_times';
+  /// Максимум записей в локальной таблице рекордов.
+  static const int maxRecords = 10;
 
   Future<AppSettings> loadSettings() async {
     final p = await SharedPreferences.getInstance();
@@ -177,10 +180,23 @@ class LocalStore {
     }
   }
 
-  // --- Таблица рекордов (топ-10) ---
+  /// Удаляет сохранённую партию (выбор «Новая игра» вместо «Продолжить»).
+  Future<void> clearSavedKlondike() async {
+    final p = await SharedPreferences.getInstance();
+    await p.remove(_kGameKlondike);
+  }
 
-  static const _kRecords = 'records';
-  static const int maxRecords = 10;
+  Future<void> clearSavedSpider() async {
+    final p = await SharedPreferences.getInstance();
+    await p.remove(_kGameSpider);
+  }
+
+  Future<void> clearSavedFreecell() async {
+    final p = await SharedPreferences.getInstance();
+    await p.remove(_kGameFreecell);
+  }
+
+  // --- Таблица рекордов (топ-10) ---
 
   Future<List<RecordEntry>> loadRecords() async {
     final p = await SharedPreferences.getInstance();

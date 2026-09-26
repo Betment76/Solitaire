@@ -224,7 +224,7 @@ class FreecellController extends AsyncNotifier<FreecellState> {
   }
 
   /// Возвращает подсказку от движка или null.
-  String? hint() {
+  FreecellHint? hint() {
     final current = state.asData?.value;
     if (current == null) return null;
     return _engine.hint(current);

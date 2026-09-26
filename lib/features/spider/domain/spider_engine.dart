@@ -3,6 +3,34 @@ import 'dart:math';
 import '../../../core/models/card.dart';
 import 'spider_state.dart';
 
+/// Подсказка Паука: машинный тип хода (перевод и подсветка — на экране).
+sealed class SpiderHint {
+  const SpiderHint();
+}
+
+/// Перенос стопки из [fromColumn] (начиная с [fromIndex]) в [toColumn].
+class HintSpiderMove extends SpiderHint {
+  const HintSpiderMove(this.fromColumn, this.fromIndex, this.toColumn);
+  final int fromColumn;
+  final int fromIndex;
+  final int toColumn;
+
+  @override
+  bool operator ==(Object other) =>
+      other is HintSpiderMove &&
+      other.fromColumn == fromColumn &&
+      other.fromIndex == fromIndex &&
+      other.toColumn == toColumn;
+
+  @override
+  int get hashCode => Object.hash(HintSpiderMove, fromColumn, fromIndex, toColumn);
+}
+
+/// Сдать новый ряд из колоды.
+class HintSpiderDealStock extends SpiderHint {
+  const HintSpiderDealStock();
+}
+
 /// Движок правил Паука (1/2/4 масти, всего 8 последовательностей).
 class SpiderEngine {
   SpiderState newGame({int? seed, int suitCount = 1}) {
@@ -200,19 +228,15 @@ class SpiderEngine {
     return false;
   }
 
-  /// Автозавершение: повторяет первые доступные ходы, пока есть (лимит шагов).
+  /// Автозавершение: повторяет первый доступный ход, пока есть (лимит шагов).
   SpiderState autoFinishAll(SpiderState state) {
     if (!canAutoFinish(state)) return state;
     var current = state;
     for (var step = 0; step < 500; step++) {
-      final tag = hint(current);
-      if (tag == null || tag == 'spider_deal_stock') break;
-      final parts = tag.split('_');
-      if (parts.length < 5) break;
-      final from = int.parse(parts[2]);
-      final idx = int.parse(parts[3]);
-      final to = int.parse(parts[5]);
-      final next = moveRun(current, from, idx, to);
+      final h = hint(current);
+      if (h == null || h is HintSpiderDealStock) break;
+      if (h is! HintSpiderMove) break;
+      final next = moveRun(current, h.fromColumn, h.fromIndex, h.toColumn);
       if (identical(next, current)) break;
       current = next;
     }
@@ -220,7 +244,7 @@ class SpiderEngine {
   }
 
   /// Первый доступный ход: перенос стопки или сдача из колоды (если разрешена).
-  String? hint(SpiderState state) {
+  SpiderHint? hint(SpiderState state) {
     for (var from = 0; from < state.tableau.length; from++) {
       final pile = state.tableau[from];
       for (var idx = pile.length - 1; idx >= 0; idx--) {
@@ -230,13 +254,13 @@ class SpiderEngine {
           if (to == from) continue;
           final moved = moveRun(state, from, idx, to);
           if (!identical(moved, state)) {
-            return 'spider_move_${from}_${idx}_to_$to';
+            return HintSpiderMove(from, idx, to);
           }
         }
       }
     }
     final dealt = dealFromStock(state);
-    if (!identical(dealt, state)) return 'spider_deal_stock';
+    if (!identical(dealt, state)) return const HintSpiderDealStock();
     return null;
   }
 

@@ -7,13 +7,14 @@ import '../../core/ads/yandex_rewarded.dart';
 import '../../core/app_table_background.dart';
 import '../../core/audio/sound_service.dart';
 import '../../core/l10n/app_strings.dart';
-import '../../core/models/app_settings.dart';
 import '../../core/models/card.dart';
 import '../../core/providers.dart';
 import '../../shared/widgets/game_ui_common.dart';
 import '../../shared/widgets/legal_drop_glow.dart';
+import '../../shared/widgets/playing_card_view.dart';
 import '../../shared/widgets/win_celebration.dart';
 import '../../shared/widgets/yandex_sticky_banner.dart';
+import 'domain/freecell_engine.dart';
 import 'domain/freecell_persistence.dart';
 import 'domain/freecell_state.dart';
 import 'freecell_controller.dart';
@@ -30,10 +31,6 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
   static const double _smallCardHeight = 64;
   /// Сдвиг между картами в колонке — видна полоса с рангом верхней части карты.
   static const double _tableauCardStep = 20;
-  // Крупная масть в центре и в углах classic: в 1.5 раза меньше прежней.
-  static const double _fcSuitCenterSize = 22.0 / 1.5;
-  static const double _fcSuitCornerSize = 12.0 / 1.5;
-  static const double _fcRankCornerSize = 12.0;
 
   int? _dropPulseCell;
   int? _dropPulseFoundation;
@@ -124,7 +121,7 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
 
   bool _isLegalFcFoundation(CardSuit suit) {
     final p = _activeFcDrag;
-    if (p == null || p.suitName != suit.name) return false;
+    if (p == null || p.suit != suit) return false;
     if (p.source == _FcSource.tableau) {
       return _controller.canMoveTableauToFoundation(p.fromColumn!);
     }
@@ -187,74 +184,47 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
     }
   }
 
-  /// Показать подсказку в SnackBar (тег движка → локализованный текст).
+  /// Показать подсказку в SnackBar (подсказка движка → локализованный текст).
   void _onHintPressed() {
     final s = AppStrings.of(Localizations.localeOf(context));
-    final tag = _controller.hint();
-    if (tag == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(s.t('hintNone')),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
+    final hint = _controller.hint();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(_hintMessage(s, tag)),
+        content: Text(hint == null ? s.t('hintNone') : _hintMessage(s, hint)),
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
+        duration: Duration(seconds: hint == null ? 2 : 3),
       ),
     );
   }
 
-  /// Тег подсказки из движка → локализованный текст с именем карты.
-  String _hintMessage(AppStrings s, String tag) {
+  /// Подсказка из движка → локализованный текст с именем карты.
+  String _hintMessage(AppStrings s, FreecellHint hint) {
     final st = _state;
-    if (tag.startsWith('fc_tableau_to_foundation_')) {
-      final col = int.tryParse(tag.substring('fc_tableau_to_foundation_'.length));
-      if (col == null || col >= st.tableau.length || st.tableau[col].isEmpty) {
-        return s.t('hintNone');
-      }
-      return s.t('hintFcToFoundation')
-          .replaceAll('{card}', _cardName(st.tableau[col].last))
-          .replaceAll('{n}', '${col + 1}');
-    }
-    if (tag.startsWith('fc_cell_to_foundation_')) {
-      final cell = int.tryParse(tag.substring('fc_cell_to_foundation_'.length));
-      if (cell == null || cell >= st.freeCells.length) return s.t('hintNone');
-      final card = st.freeCells[cell];
-      if (card == null) return s.t('hintNone');
-      return s.t('hintFcCellToFoundation')
-          .replaceAll('{card}', _cardName(card))
-          .replaceAll('{n}', '${cell + 1}');
-    }
-    final toTableau = RegExp(r'^fc_tableau_to_tableau_(\d+)_(\d+)$').firstMatch(tag);
-    if (toTableau != null) {
-      final from = int.parse(toTableau.group(1)!);
-      final to = int.parse(toTableau.group(2)!);
-      if (from >= st.tableau.length || st.tableau[from].isEmpty) return s.t('hintNone');
-      return s.t('hintFcToColumn')
-          .replaceAll('{card}', _cardName(st.tableau[from].last))
-          .replaceAll('{from}', '${from + 1}')
-          .replaceAll('{to}', '${to + 1}');
-    }
-    final toCell = RegExp(r'^fc_tableau_to_cell_(\d+)_(\d+)$').firstMatch(tag);
-    if (toCell != null) {
-      final col = int.parse(toCell.group(1)!);
-      final cell = int.parse(toCell.group(2)!);
-      if (col >= st.tableau.length || st.tableau[col].isEmpty) return s.t('hintNone');
-      return s.t('hintFcToCell')
-          .replaceAll('{card}', _cardName(st.tableau[col].last))
-          .replaceAll('{n}', '${cell + 1}');
-    }
-    return s.t('hintNone');
+    return switch (hint) {
+      HintFcTableauToFoundation(:final col) => st.tableau[col].isEmpty
+          ? s.t('hintNone')
+          : s.t('hintFcToFoundation')
+              .replaceAll('{card}', cardName(st.tableau[col].last))
+              .replaceAll('{n}', '${col + 1}'),
+      HintFcCellToFoundation(:final cell) =>
+        cell >= st.freeCells.length || st.freeCells[cell] == null
+            ? s.t('hintNone')
+            : s.t('hintFcCellToFoundation')
+                .replaceAll('{card}', cardName(st.freeCells[cell]!))
+                .replaceAll('{n}', '${cell + 1}'),
+      HintFcTableauToTableau(:final from, :final to) => st.tableau[from].isEmpty
+          ? s.t('hintNone')
+          : s.t('hintFcToColumn')
+              .replaceAll('{card}', cardName(st.tableau[from].last))
+              .replaceAll('{from}', '${from + 1}')
+              .replaceAll('{to}', '${to + 1}'),
+      HintFcTableauToCell(:final col, :final cell) => st.tableau[col].isEmpty
+          ? s.t('hintNone')
+          : s.t('hintFcToCell')
+              .replaceAll('{card}', cardName(st.tableau[col].last))
+              .replaceAll('{n}', '${cell + 1}'),
+    };
   }
-
-  /// Имя карты для текста подсказки, например `10♥`.
-  String _cardName(PlayingCard c) => '${_rank(c.rank)}${_suit(c.suit)}';
 
   /// Отмена: 5 бесплатных за партию, дальше диалог и rewarded (как в Пауке).
   Future<void> _onFreecellUndo() async {
@@ -572,7 +542,7 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
             final w = constraints.maxWidth;
             final hasHover = candidate.isNotEmpty;
             final slotWidget =
-                card == null ? _emptySmallSlot() : _fcPlayingCard(card, width: w);
+                card == null ? _emptySmallSlot() : PlayingCardView(card: card, width: w, height: _smallCardHeight);
             final pulsedWidget = AnimatedScale(
               duration: const Duration(milliseconds: 160),
               scale: isPulse ? 1.05 : 1,
@@ -587,16 +557,16 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
               return _isLegalFcFreeCell(idx) ? legalDropGlow(slot) : slot;
             }
             return Draggable<_FcDragPayload>(
-              data: _FcDragPayload.fromFreeCell(idx, card.suit.name),
+              data: _FcDragPayload.fromFreeCell(idx, card.suit),
               onDragStarted: () => setState(() {
-                _activeFcDrag = _FcDragPayload.fromFreeCell(idx, card.suit.name);
+                _activeFcDrag = _FcDragPayload.fromFreeCell(idx, card.suit);
               }),
               onDragEnd: (_) => _clearFcDrag(),
               onDragCompleted: _clearFcDrag,
               onDraggableCanceled: (_, __) => _clearFcDrag(),
               feedback: Material(
                 color: Colors.transparent,
-                child: _fcPlayingCard(card, width: w),
+                child: PlayingCardView(card: card, width: w, height: _smallCardHeight),
               ),
               childWhenDragging: _emptySmallSlot(),
               child: pulsedWidget,
@@ -613,7 +583,7 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
     return DragTarget<_FcDragPayload>(
       onWillAcceptWithDetails: (details) {
         final p = details.data;
-        if (p.suitName != suit.name) return false;
+        if (p.suit != suit) return false;
         if (p.source == _FcSource.tableau) {
           return _controller.canMoveTableauToFoundation(p.fromColumn!);
         }
@@ -640,7 +610,7 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
             final hasHover = candidate.isNotEmpty;
             final slotWidget = pile.isEmpty
                 ? _emptyFoundationSlot()
-                : _fcPlayingCard(pile.last, width: w);
+                : PlayingCardView(card: pile.last, width: w, height: _smallCardHeight);
             final pulsedWidget = AnimatedScale(
               duration: const Duration(milliseconds: 160),
               scale: isPulse ? 1.05 : 1,
@@ -657,16 +627,16 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
                   : slot;
             }
             return Draggable<_FcDragPayload>(
-              data: _FcDragPayload.fromFoundation(suit.name),
+              data: _FcDragPayload.fromFoundation(suit),
               onDragStarted: () => setState(() {
-                _activeFcDrag = _FcDragPayload.fromFoundation(suit.name);
+                _activeFcDrag = _FcDragPayload.fromFoundation(suit);
               }),
               onDragEnd: (_) => _clearFcDrag(),
               onDragCompleted: _clearFcDrag,
               onDraggableCanceled: (_, __) => _clearFcDrag(),
               feedback: Material(
                 color: Colors.transparent,
-                child: _fcPlayingCard(pile.last, width: w),
+                child: PlayingCardView(card: pile.last, width: w, height: _smallCardHeight),
               ),
               childWhenDragging: pulsedWidget,
               child: pulsedWidget,
@@ -727,7 +697,7 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
                                 data: _FcDragPayload.fromTableau(
                                   column,
                                   i,
-                                  pile[i].suit.name,
+                                  pile[i].suit,
                                 ),
                                 onDragStarted: () {
                                   setState(() {
@@ -736,7 +706,7 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
                                     _activeFcDrag = _FcDragPayload.fromTableau(
                                       column,
                                       i,
-                                      pile[i].suit.name,
+                                      pile[i].suit,
                                     );
                                   });
                                 },
@@ -748,9 +718,9 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
                                   child: _runDragFeedback(pile, i, cardWidth),
                                 ),
                                 childWhenDragging: const SizedBox.shrink(),
-                                child: _fcPlayingCard(pile[i], width: cardWidth),
+                                child: PlayingCardView(card: pile[i], width: cardWidth, height: _smallCardHeight),
                               )
-                            : _fcPlayingCard(pile[i], width: cardWidth),
+                            : PlayingCardView(card: pile[i], width: cardWidth, height: _smallCardHeight),
                       ),
                 ],
               );
@@ -793,7 +763,7 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
               top: i * _tableauCardStep,
               left: 0,
               right: 0,
-              child: _fcPlayingCard(run[i], width: width),
+              child: PlayingCardView(card: run[i], width: width, height: _smallCardHeight),
             ),
         ],
       ),
@@ -829,182 +799,6 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
       ),
     );
   }
-
-  /// Рубашка по настройке «Стиль».
-  Widget _fcCardBack({double? width}) {
-    final loaded = ref.read(settingsProvider).asData?.value;
-    final back = loaded?.cardBack ?? 'blue';
-    return Container(
-      width: width,
-      height: _smallCardHeight,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: cardBackGradientColors(back),
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white70, width: 1.1),
-        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 2)],
-      ),
-    );
-  }
-
-  /// Лицо карты: [width] — явная ширина (важно для feedback при перетаскивании).
-  Widget _fcPlayingCard(PlayingCard c, {double? width}) {
-    if (!c.faceUp) return _fcCardBack(width: width);
-    final loaded = ref.read(settingsProvider).asData?.value;
-    final faceStyle = loaded?.cardFaceStyle ?? CardFaceStyle.classic;
-    final isRed = c.suit == CardSuit.hearts || c.suit == CardSuit.diamonds;
-    final ink = isRed ? const Color(0xFFB42020) : const Color(0xFF1B1B1B);
-    final rankText = _rank(c.rank);
-    final suitText = _suit(c.suit);
-    return Container(
-      width: width,
-      height: _smallCardHeight,
-      padding: faceStyle == CardFaceStyle.minimal
-          ? EdgeInsets.zero
-          : const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 2)],
-      ),
-      child: faceStyle == CardFaceStyle.minimal
-          ? Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned(
-                  left: 4,
-                  top: 0,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        rankText,
-                        style: TextStyle(
-                          color: ink,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 3),
-                        child: Text(
-                          suitText,
-                          style: TextStyle(
-                            color: ink,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.center,
-                  child: Text(
-                    suitText,
-                    style: TextStyle(
-                      color: ink.withValues(alpha: 0.24),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 26,
-                    ),
-                  ),
-                ),
-              ],
-            )
-          : Stack(
-              children: [
-                Text.rich(
-                  TextSpan(
-                    style: TextStyle(
-                      color: ink,
-                      fontWeight: FontWeight.w800,
-                      height: 1.0,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: rankText,
-                        style: const TextStyle(fontSize: _fcRankCornerSize),
-                      ),
-                      TextSpan(
-                        text: '\n$suitText',
-                        style: TextStyle(fontSize: _fcSuitCornerSize),
-                      ),
-                    ],
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.center,
-                  child: Text(
-                    suitText,
-                    style: TextStyle(
-                      color: ink.withValues(alpha: 0.30),
-                      fontWeight: FontWeight.w800,
-                      fontSize: _fcSuitCenterSize,
-                    ),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Transform.rotate(
-                    angle: 3.1415926535897932,
-                    child: Text.rich(
-                      TextSpan(
-                        style: TextStyle(
-                          color: ink,
-                          fontWeight: FontWeight.w800,
-                          height: 1.0,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: rankText,
-                            style: const TextStyle(fontSize: _fcRankCornerSize),
-                          ),
-                          TextSpan(
-                            text: '\n$suitText',
-                            style: TextStyle(fontSize: _fcSuitCornerSize),
-                          ),
-                        ],
-                      ),
-                      textAlign: TextAlign.right,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-    );
-  }
-
-  String _rank(int rank) {
-    switch (rank) {
-      case 1:
-        return 'A';
-      case 11:
-        return 'J';
-      case 12:
-        return 'Q';
-      case 13:
-        return 'K';
-      default:
-        return '$rank';
-    }
-  }
-
-  String _suit(CardSuit suit) {
-    switch (suit) {
-      case CardSuit.hearts:
-        return '♥';
-      case CardSuit.diamonds:
-        return '♦';
-      case CardSuit.clubs:
-        return '♣';
-      case CardSuit.spades:
-        return '♠';
-    }
-  }
 }
 
 enum _FcSource { tableau, freeCell, foundation }
@@ -1012,36 +806,36 @@ enum _FcSource { tableau, freeCell, foundation }
 class _FcDragPayload {
   const _FcDragPayload({
     required this.source,
-    required this.suitName,
+    required this.suit,
     this.fromColumn,
     this.fromCardIndex,
     this.fromCell,
   });
 
   final _FcSource source;
-  final String suitName;
+  final CardSuit suit;
   final int? fromColumn;
   final int? fromCardIndex;
   final int? fromCell;
 
-  factory _FcDragPayload.fromTableau(int fromColumn, int fromCardIndex, String suitName) {
+  factory _FcDragPayload.fromTableau(int fromColumn, int fromCardIndex, CardSuit suit) {
     return _FcDragPayload(
       source: _FcSource.tableau,
-      suitName: suitName,
+      suit: suit,
       fromColumn: fromColumn,
       fromCardIndex: fromCardIndex,
     );
   }
 
-  factory _FcDragPayload.fromFreeCell(int fromCell, String suitName) {
+  factory _FcDragPayload.fromFreeCell(int fromCell, CardSuit suit) {
     return _FcDragPayload(
       source: _FcSource.freeCell,
-      suitName: suitName,
+      suit: suit,
       fromCell: fromCell,
     );
   }
 
-  factory _FcDragPayload.fromFoundation(String suitName) {
-    return _FcDragPayload(source: _FcSource.foundation, suitName: suitName);
+  factory _FcDragPayload.fromFoundation(CardSuit suit) {
+    return _FcDragPayload(source: _FcSource.foundation, suit: suit);
   }
 }

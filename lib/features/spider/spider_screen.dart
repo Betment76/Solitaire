@@ -12,6 +12,7 @@ import '../../core/providers.dart';
 import '../../core/models/card.dart';
 import '../../shared/widgets/game_ui_common.dart';
 import '../../shared/widgets/legal_drop_glow.dart';
+import '../../shared/widgets/playing_card_view.dart';
 import '../../shared/widgets/win_celebration.dart';
 import '../../shared/widgets/yandex_sticky_banner.dart';
 import 'domain/spider_engine.dart';
@@ -123,21 +124,15 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
     return child;
   }
 
-  Set<String> _spiderHintKeysForTag(String tag, SpiderState st) {
-    if (tag == 'spider_deal_stock') return {'hint_spider_stock'};
-    final m = RegExp(r'^spider_move_(\d+)_(\d+)_to_(\d+)$').firstMatch(tag);
-    if (m != null) {
-      final from = int.parse(m.group(1)!);
-      final startIdx = int.parse(m.group(2)!);
-      final to = int.parse(m.group(3)!);
-      final keys = <String>{'hint_spider_t:$to'};
-      final fp = st.tableau[from];
-      for (var i = startIdx; i < fp.length; i++) {
-        keys.add('hint_spider_card:$from:$i');
-      }
-      return keys;
-    }
-    return {};
+  Set<String> _spiderHintKeysForHint(SpiderHint hint, SpiderState st) {
+    return switch (hint) {
+      HintSpiderDealStock() => {'hint_spider_stock'},
+      HintSpiderMove(:final fromColumn, :final fromIndex, :final toColumn) => {
+          'hint_spider_t:$toColumn',
+          for (var i = fromIndex; i < st.tableau[fromColumn].length; i++)
+            'hint_spider_card:$fromColumn:$i',
+        },
+    };
   }
 
   Future<void> _runSpiderHintBlink(Set<String> keys) async {
@@ -160,18 +155,19 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
     });
   }
 
-  void _flashSpiderHint(String? tag) {
-    if (tag == null) return;
-    final keys = _spiderHintKeysForTag(tag, _state);
+  void _flashSpiderHint(SpiderHint? hint) {
+    if (hint == null) return;
+    final keys = _spiderHintKeysForHint(hint, _state);
     if (keys.isEmpty) return;
     unawaited(_runSpiderHintBlink(keys));
   }
 
-  String _spiderHintMessage(AppStrings s, String? tag) {
-    if (tag == null) return s.t('hintNone');
-    if (tag == 'spider_deal_stock') return s.t('hintSpiderDeal');
-    if (tag.startsWith('spider_move_')) return s.t('hintTableauToTableau');
-    return s.t('hintNone');
+  String _spiderHintMessage(AppStrings s, SpiderHint? hint) {
+    if (hint == null) return s.t('hintNone');
+    return switch (hint) {
+      HintSpiderDealStock() => s.t('hintSpiderDeal'),
+      HintSpiderMove() => s.t('hintTableauToTableau'),
+    };
   }
 
   Future<void> _onSpiderHintPressed() async {
@@ -214,10 +210,10 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
         );
         return;
       }
-      _flashSpiderHint(r.tag);
+      _flashSpiderHint(r.hint);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_spiderHintMessage(s, r.tag)),
+          content: Text(_spiderHintMessage(s, r.hint)),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 3),
         ),
@@ -315,9 +311,8 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
 
   Future<void> _dealFromStockAnimated() async {
     if (_isDealing) return;
-    final current = _state;
-    final next = SpiderEngine().dealFromStock(current);
-    if (identical(next, current)) return;
+    // Возможность раздачи проверяет контроллер — правила исполняются там.
+    if (!_controller.canDealFromStock()) return;
     final settings = ref
         .read(settingsProvider)
         .maybeWhen(data: (v) => v, orElse: () => null);
@@ -580,7 +575,9 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
                                                         : _dealFromStockAnimated,
                                                 child: state.stock.isEmpty
                                                     ? _emptySlot()
-                                                    : _cardBack(),
+                                                    : const PlayingCardView.back(
+                                                        height: _cardHeight,
+                                                      ),
                                               ),
                                             ),
                                           )
@@ -785,7 +782,7 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
         _dragFromColumn == column &&
         _dragFromIndex != null &&
         idx >= _dragFromIndex!;
-    final cardView = _playingCard(card);
+    final cardView = PlayingCardView(card: card, height: _cardHeight);
     final cardFace = _spiderHintWrapCard(column, idx, pile, cardView);
     if (isDragged) {
       // Плавно приглушаем исходную стопку, чтобы не было резкого "рывка".
@@ -810,7 +807,11 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
               top: i * _tableauStep,
               left: 0,
               right: 0,
-              child: _playingCard(run[i]),
+              child: PlayingCardView(
+                card: run[i],
+                width: columnCardWidth,
+                height: _cardHeight,
+              ),
             ),
         ],
       ),
@@ -882,12 +883,18 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
                       ? SizedBox(
                           width: flyingCardWidth,
                           height: _cardHeight,
-                          child: _cardBack(),
+                          child: const PlayingCardView.back(
+                            height: _cardHeight,
+                          ),
                         )
                       : SizedBox(
                           width: flyingCardWidth,
                           height: _cardHeight,
-                          child: _playingCard(flyingCard),
+                          child: PlayingCardView(
+                            card: flyingCard,
+                            width: flyingCardWidth,
+                            height: _cardHeight,
+                          ),
                         ),
                 ),
               ],
@@ -947,7 +954,11 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
                     child: SizedBox(
                       width: flyingCardWidth,
                       height: _cardHeight,
-                      child: _playingCard(_collectCards[i]),
+                      child: PlayingCardView(
+                        card: _collectCards[i],
+                        width: flyingCardWidth,
+                        height: _cardHeight,
+                      ),
                     ),
                   ),
                 Positioned(
@@ -958,7 +969,11 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
                   child: SizedBox(
                     width: flyingCardWidth,
                     height: _cardHeight,
-                    child: _playingCard(flying),
+                    child: PlayingCardView(
+                      card: flying,
+                      width: flyingCardWidth,
+                      height: _cardHeight,
+                    ),
                   ),
                 ),
               ],
@@ -986,14 +1001,20 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
       children: [
         Positioned.fill(
           top: 8,
-          child: Opacity(opacity: 0.45, child: _cardBack()),
+          child: Opacity(
+            opacity: 0.45,
+            child: const PlayingCardView.back(height: _cardHeight),
+          ),
         ),
         Positioned.fill(
           top: 4,
-          child: Opacity(opacity: 0.75, child: _cardBack()),
+          child: Opacity(
+            opacity: 0.75,
+            child: const PlayingCardView.back(height: _cardHeight),
+          ),
         ),
         // Финальная карта собранной последовательности — туз, показываем его сверху.
-        _playingCard(ace),
+        PlayingCardView(card: ace, width: _cardWidth, height: _cardHeight),
       ],
     );
   }
@@ -1006,165 +1027,6 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
         borderRadius: BorderRadius.circular(8),
       ),
     );
-  }
-
-  Widget _cardBack() {
-    final settings = ref.read(settingsProvider).asData?.value;
-    final back = settings?.cardBack ?? 'blue';
-    return Container(
-      // Закрытая карта должна иметь ту же высоту, иначе превращается в "полоску".
-      height: _cardHeight,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: cardBackGradientColors(back),
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white70, width: 1.1),
-      ),
-    );
-  }
-
-  Widget _playingCard(PlayingCard c) {
-    if (!c.faceUp) return _cardBack();
-    final settings = ref.read(settingsProvider).asData?.value;
-    final isRed = c.suit == CardSuit.hearts || c.suit == CardSuit.diamonds;
-    final faceStyle = settings?.cardFaceStyle ?? CardFaceStyle.classic;
-    final ink = isRed ? const Color(0xFFB42020) : const Color(0xFF1B1B1B);
-    final rankText = _rank(c.rank);
-    final suitText = _suit(c.suit);
-    return Container(
-      height: _cardHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 2)],
-      ),
-      child: faceStyle == CardFaceStyle.minimal
-          ? Stack(
-              children: [
-                // Узкая карта Паука: для «10» ранг+масть в ряд — меньший кегль и scale-down.
-                Positioned(
-                  left: 1,
-                  top: 0,
-                  child: SizedBox(
-                    width: _cardWidth - 6,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            rankText,
-                            style: TextStyle(
-                              color: ink,
-                              fontWeight: FontWeight.w800,
-                              fontSize: rankText.length >= 2 ? 9.5 : 11,
-                              height: 1,
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(left: 1),
-                            child: Text(
-                              suitText,
-                              style: TextStyle(
-                                color: ink,
-                                fontWeight: FontWeight.w800,
-                                fontSize: rankText.length >= 2 ? 8.5 : 10,
-                                height: 1,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.center,
-                  child: Text(
-                    suitText,
-                    style: TextStyle(
-                      color: ink.withValues(alpha: 0.24),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 20,
-                    ),
-                  ),
-                ),
-              ],
-            )
-          : Stack(
-              children: [
-                Text(
-                  '$rankText\n$suitText',
-                  style: TextStyle(
-                    color: ink,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 11,
-                    height: 1.0,
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.center,
-                  child: Text(
-                    suitText,
-                    style: TextStyle(
-                      color: ink.withValues(alpha: 0.30),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 18,
-                    ),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Transform.rotate(
-                    angle: 3.1415926,
-                    child: Text(
-                      '$rankText\n$suitText',
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                        color: ink,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 11,
-                        height: 1.0,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-    );
-  }
-
-  String _rank(int rank) {
-    switch (rank) {
-      case 1:
-        return 'A';
-      case 11:
-        return 'J';
-      case 12:
-        return 'Q';
-      case 13:
-        return 'K';
-      default:
-        return '$rank';
-    }
-  }
-
-  String _suit(CardSuit suit) {
-    switch (suit) {
-      case CardSuit.hearts:
-        return '♥';
-      case CardSuit.diamonds:
-        return '♦';
-      case CardSuit.clubs:
-        return '♣';
-      case CardSuit.spades:
-        return '♠';
-    }
   }
 }
 

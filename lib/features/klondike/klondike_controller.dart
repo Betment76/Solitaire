@@ -148,20 +148,20 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
   void grantUndoFromReward() => _undoBudget++;
 
   /// Подсказка: бесплатные попытки или нужна реклама (`needsReward`).
-  ({String? tag, bool needsReward, bool noMoves}) takeHintOrPrepareReward() {
+  ({KlondikeHint? hint, bool needsReward, bool noMoves}) takeHintOrPrepareReward() {
     final current = state.asData?.value;
-    if (current == null) return (tag: null, needsReward: false, noMoves: true);
+    if (current == null) return (hint: null, needsReward: false, noMoves: true);
     if (_freeHintsRemaining <= 0) {
-      return (tag: null, needsReward: true, noMoves: false);
+      return (hint: null, needsReward: true, noMoves: false);
     }
-    final tag = _engine.hint(current);
-    if (tag == null) {
-      return (tag: null, needsReward: false, noMoves: true);
+    final h = _engine.hint(current);
+    if (h == null) {
+      return (hint: null, needsReward: false, noMoves: true);
     }
     _freeHintsRemaining--;
     final board = state.asData!.value;
     unawaited(_persist(board));
-    return (tag: tag, needsReward: false, noMoves: false);
+    return (hint: h, needsReward: false, noMoves: false);
   }
 
   Future<void> undo() async {
@@ -269,13 +269,54 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
     return _engine.canDragTableauRun(current, fromColumn, fromCardIndex);
   }
 
+  // --- Проверки ходов для drag-and-drop (без изменения состояния) ---
+
+  bool canMoveWasteToTableau(int tableauIndex) {
+    final current = state.asData?.value;
+    if (current == null) return false;
+    return !identical(_engine.moveWasteToTableau(current, tableauIndex), current);
+  }
+
+  bool canMoveWasteToFoundation() {
+    final current = state.asData?.value;
+    if (current == null) return false;
+    return !identical(_engine.moveWasteToFoundation(current), current);
+  }
+
+  bool canMoveTableauTopToFoundation(int fromIndex) {
+    final current = state.asData?.value;
+    if (current == null) return false;
+    return !identical(
+      _engine.moveTableauTopToFoundation(current, fromIndex),
+      current,
+    );
+  }
+
+  bool canMoveFoundationToTableau(CardSuit suit, int tableauIndex) {
+    final current = state.asData?.value;
+    if (current == null) return false;
+    return !identical(
+      _engine.moveFoundationToTableau(current, suit, tableauIndex),
+      current,
+    );
+  }
+
+  bool canMoveTableauRunToTableau(int fromColumn, int fromCardIndex, int toColumn) {
+    final current = state.asData?.value;
+    if (current == null) return false;
+    return !identical(
+      _engine.moveTableauRunToTableau(current, fromColumn, fromCardIndex, toColumn),
+      current,
+    );
+  }
+
   bool canAutoFinish() {
     final current = state.asData?.value;
     if (current == null) return false;
     return _engine.canAutoFinish(current);
   }
 
-  String? hint() {
+  KlondikeHint? hint() {
     final current = state.asData?.value;
     if (current == null) return null;
     return _engine.hint(current);
@@ -311,16 +352,6 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
             undoBudget: _undoBudget,
           ),
         );
-  }
-
-  /// Метод для применения хода из экрана (когда уже есть preview).
-  void applyFromScreen(KlondikeState current, KlondikeState next) {
-    if (identical(next, current)) return;
-    _maybeRecordWin(current, next);
-    _undo.add(current);
-    _redo.clear();
-    state = AsyncData(next);
-    unawaited(_persist(next));
   }
 
   void _maybeRecordWin(KlondikeState current, KlondikeState next) {

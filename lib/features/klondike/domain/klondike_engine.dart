@@ -3,6 +3,65 @@ import 'dart:math';
 import 'card.dart';
 import 'klondike_state.dart';
 
+/// Подсказка Косынки: машинный тип хода (перевод и подсветка — на экране).
+sealed class KlondikeHint {
+  const KlondikeHint();
+}
+
+/// Добрать из колоды.
+class HintDrawFromStock extends KlondikeHint {
+  const HintDrawFromStock();
+}
+
+/// Верхняя карта waste → дом.
+class HintWasteToFoundation extends KlondikeHint {
+  const HintWasteToFoundation();
+}
+
+/// Верхняя карта waste → колонка [column].
+class HintWasteToTableau extends KlondikeHint {
+  const HintWasteToTableau(this.column);
+  final int column;
+
+  @override
+  bool operator ==(Object other) =>
+      other is HintWasteToTableau && other.column == column;
+
+  @override
+  int get hashCode => Object.hash(HintWasteToTableau, column);
+}
+
+/// Верхняя карта колонки [column] → дом.
+class HintTableauToFoundation extends KlondikeHint {
+  const HintTableauToFoundation(this.column);
+  final int column;
+
+  @override
+  bool operator ==(Object other) =>
+      other is HintTableauToFoundation && other.column == column;
+
+  @override
+  int get hashCode => Object.hash(HintTableauToFoundation, column);
+}
+
+/// Стопка открытых карт из [fromColumn] (начиная с [fromCardIndex]) → [toColumn].
+class HintTableauRun extends KlondikeHint {
+  const HintTableauRun(this.fromColumn, this.fromCardIndex, this.toColumn);
+  final int fromColumn;
+  final int fromCardIndex;
+  final int toColumn;
+
+  @override
+  bool operator ==(Object other) =>
+      other is HintTableauRun &&
+      other.fromColumn == fromColumn &&
+      other.fromCardIndex == fromCardIndex &&
+      other.toColumn == toColumn;
+
+  @override
+  int get hashCode => Object.hash(HintTableauRun, fromColumn, fromCardIndex, toColumn);
+}
+
 /// Движок правил Косынки (MVP): draw, ходы из waste, подсказка.
 class KlondikeEngine {
   KlondikeState newGame({required int drawCount, int? seed}) {
@@ -246,18 +305,19 @@ class KlondikeEngine {
     return current;
   }
 
-  String? hint(KlondikeState state) {
+  /// Подсказка: машинный тип хода или null, если ходов нет.
+  KlondikeHint? hint(KlondikeState state) {
     if (state.waste.isNotEmpty) {
       final card = state.waste.last;
       final foundation = state.foundations[card.suit]!;
       if (_canMoveToFoundation(card, foundation)) {
-        return 'waste_to_foundation';
+        return const HintWasteToFoundation();
       }
       for (var i = 0; i < state.tableau.length; i++) {
         final pile = state.tableau[i];
         final top = pile.isEmpty ? null : pile.last;
         if (_canPlaceOnTableau(card, top)) {
-          return 'waste_to_tableau_$i';
+          return HintWasteToTableau(i);
         }
       }
     }
@@ -269,7 +329,7 @@ class KlondikeEngine {
       if (!top.faceUp) continue;
       final foundation = state.foundations[top.suit]!;
       if (_canMoveToFoundation(top, foundation)) {
-        return 'tableau_to_foundation_$i';
+        return HintTableauToFoundation(i);
       }
     }
     // Табло → табло (одна карта или стопка), раньше чем добор из колоды.
@@ -282,12 +342,12 @@ class KlondikeEngine {
           if (to == from) continue;
           final moved = moveTableauRunToTableau(state, from, idx, to);
           if (!identical(moved, state)) {
-            return 'tableau_run_${from}_${idx}_to_$to';
+            return HintTableauRun(from, idx, to);
           }
         }
       }
     }
-    if (state.stock.isNotEmpty) return 'draw_from_stock';
+    if (state.stock.isNotEmpty) return const HintDrawFromStock();
     return null;
   }
 

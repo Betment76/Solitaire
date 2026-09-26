@@ -77,9 +77,9 @@ class _SelectorScreenState extends ConsumerState<SelectorScreen> {
       }
       // Новая игра — удаляем сохранение, чтобы экран не загрузил stale-состояние.
       final store = ref.read(localStoreProvider);
-      if (route == '/klondike') await store.saveKlondikeState({});   // перезатрём
-      if (route == '/spider') await store.saveSpiderState({});
-      if (route == '/freecell') await store.saveFreecellState({});
+      if (route == '/klondike') await store.clearSavedKlondike();
+      if (route == '/spider') await store.clearSavedSpider();
+      if (route == '/freecell') await store.clearSavedFreecell();
     }
     await _openGameRoute(route);
   }

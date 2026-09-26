@@ -274,7 +274,7 @@ void main() {
       );
       final hint = engine.hint(state);
       expect(hint, isNotNull);
-      expect(hint!, contains('foundation'));
+      expect(hint!, isA<HintFcTableauToFoundation>());
     });
 
     test('hint при пустых ячейках', () {

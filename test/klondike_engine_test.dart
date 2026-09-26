@@ -57,7 +57,7 @@ void main() {
           ...List.generate(5, (_) => const <PlayingCard>[]),
         ],
       );
-      expect(engine.hint(state), 'tableau_run_0_0_to_1');
+      expect(engine.hint(state), const HintTableauRun(0, 0, 1));
     });
 
     test('hint предлагает draw, когда нет явного хода из waste', () {
@@ -78,7 +78,7 @@ void main() {
           (_) => const [PlayingCard(suit: CardSuit.hearts, rank: 10, faceUp: true)],
         ),
       );
-      expect(engine.hint(state), 'draw_from_stock');
+      expect(engine.hint(state), const HintDrawFromStock());
     });
 
     test('победа определяется по 13 картам в каждом foundation', () {

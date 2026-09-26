@@ -5,7 +5,9 @@ import '../../core/ads/yandex_rewarded.dart';
 import '../../core/app_table_background.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/models/app_settings.dart';
+import '../../core/models/card.dart';
 import '../../core/models/unlockable_style.dart';
+import '../../shared/widgets/playing_card_view.dart';
 import '../../core/providers.dart';
 import '../../shared/widgets/game_ui_common.dart';
 
@@ -71,7 +73,7 @@ class _StyleScreenState extends ConsumerState<StyleScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              _StylePreview(settings: data),
+              _StylePreview(),
               const Spacer(),
               Container(
                 width: double.infinity,
@@ -224,7 +226,10 @@ class _StyleScreenState extends ConsumerState<StyleScreen> {
         _swatchTile(
           selected: data.cardFaceStyle == CardFaceStyle.classic,
           label: s.t('styleFaceClassic'),
-          child: const _CardFacePreview(classic: true),
+          child: const PlayingCardView(
+            card: PlayingCard(suit: CardSuit.hearts, rank: 1, faceUp: true),
+            faceStyleOverride: CardFaceStyle.classic,
+          ),
           onTap: () => save(
             data.copyWith(cardFaceStyle: CardFaceStyle.classic),
           ),
@@ -232,7 +237,10 @@ class _StyleScreenState extends ConsumerState<StyleScreen> {
         _swatchTile(
           selected: data.cardFaceStyle == CardFaceStyle.minimal,
           label: s.t('styleFaceMinimal'),
-          child: const _CardFacePreview(classic: false),
+          child: const PlayingCardView(
+            card: PlayingCard(suit: CardSuit.hearts, rank: 1, faceUp: true),
+            faceStyleOverride: CardFaceStyle.minimal,
+          ),
           onTap: () => save(
             data.copyWith(cardFaceStyle: CardFaceStyle.minimal),
           ),
@@ -317,16 +325,12 @@ class _StyleScreenState extends ConsumerState<StyleScreen> {
   }
 }
 
-/// Верхнее превью: несколько карт и рубашка.
+/// Верхнее превью: несколько карт и рубашка (стиль берётся из настроек).
 class _StylePreview extends StatelessWidget {
-  const _StylePreview({required this.settings});
-
-  final AppSettings settings;
+  const _StylePreview();
 
   @override
   Widget build(BuildContext context) {
-    final red = const Color(0xFFB42020);
-    final black = const Color(0xFF1B1B1B);
     return Material(
       color: Colors.transparent,
       child: SizedBox(
@@ -335,148 +339,28 @@ class _StylePreview extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _previewFaceCard(
-                label: 'K ♣',
-                color: black,
-                classic: settings.cardFaceStyle == CardFaceStyle.classic,
+              const PlayingCardView(
+                card: PlayingCard(suit: CardSuit.clubs, rank: 13, faceUp: true),
+                width: 62,
+                height: 88,
               ),
               const SizedBox(width: 8),
-              _previewFaceCard(
-                label: '10 ♥',
-                color: red,
-                classic: settings.cardFaceStyle == CardFaceStyle.classic,
+              const PlayingCardView(
+                card: PlayingCard(suit: CardSuit.hearts, rank: 10, faceUp: true),
+                width: 62,
+                height: 88,
               ),
               const SizedBox(width: 8),
-              _previewFaceCard(
-                label: '2 ♣',
-                color: black,
-                classic: settings.cardFaceStyle == CardFaceStyle.classic,
+              const PlayingCardView(
+                card: PlayingCard(suit: CardSuit.clubs, rank: 2, faceUp: true),
+                width: 62,
+                height: 88,
               ),
               const SizedBox(width: 8),
-              _previewBackCard(settings.cardBack),
+              const PlayingCardView.back(width: 62, height: 88),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _previewFaceCard({
-    required String label,
-    required Color color,
-    required bool classic,
-  }) {
-    final rank = label.split(' ').first;
-    final suit = label.split(' ').last;
-    return Container(
-      width: 62,
-      height: 88,
-      padding: classic ? const EdgeInsets.all(6) : EdgeInsets.zero,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 3)],
-      ),
-      child: classic
-          ? Stack(
-              children: [
-                Text(
-                  '$rank\n$suit',
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
-                    height: 1.0,
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.center,
-                  child: Text(
-                    suit,
-                    style: TextStyle(
-                      color: color.withValues(alpha: 0.28),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 28,
-                    ),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Transform.rotate(
-                    angle: 3.1415926,
-                    child: Text(
-                      '$rank\n$suit',
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                        color: color,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
-                        height: 1.0,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            )
-          : Stack(
-              children: [
-                Positioned(
-                  left: 4,
-                  top: 0,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        rank,
-                        style: TextStyle(
-                          color: color,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 18,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 3),
-                        child: Text(
-                          suit,
-                          style: TextStyle(
-                            color: color,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 19,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.center,
-                  child: Text(
-                    suit,
-                    style: TextStyle(
-                      color: color.withValues(alpha: 0.24),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 28,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-    );
-  }
-
-  Widget _previewBackCard(String back) {
-    final colors = cardBackColors[back] ?? cardBackColors['blue']!;
-    return Container(
-      width: 62,
-      height: 88,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: colors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.white70, width: 1.1),
       ),
     );
   }
@@ -502,105 +386,6 @@ class _BgPreview extends StatelessWidget {
         ),
       ),
       child: const SizedBox.expand(),
-    );
-  }
-}
-
-/// Мини-превью лицевой карты в плитке.
-class _CardFacePreview extends StatelessWidget {
-  const _CardFacePreview({required this.classic});
-
-  final bool classic;
-
-  @override
-  Widget build(BuildContext context) {
-    const ink = Color(0xFFB42020);
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.all(8),
-      child: classic
-          ? Stack(
-              children: [
-                const Text(
-                  'A\n♥',
-                  style: TextStyle(
-                    color: ink,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
-                    height: 1.0,
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.center,
-                  child: Text(
-                    '♥',
-                    style: TextStyle(
-                      color: ink.withValues(alpha: 0.28),
-                      fontSize: 28,
-                    ),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Transform.rotate(
-                    angle: 3.1415926,
-                    child: const Text(
-                      'A\n♥',
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                        color: ink,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
-                        height: 1.0,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            )
-          : Stack(
-              children: [
-                Positioned(
-                  left: 4,
-                  top: 0,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Text(
-                        'A',
-                        style: TextStyle(
-                          color: ink,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 19,
-                        ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.only(left: 3),
-                        child: Text(
-                          '♥',
-                          style: TextStyle(
-                            color: ink,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.center,
-                  child: Text(
-                    '♥',
-                    style: TextStyle(
-                      color: ink.withValues(alpha: 0.24),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 27,
-                    ),
-                  ),
-                ),
-              ],
-            ),
     );
   }
 }

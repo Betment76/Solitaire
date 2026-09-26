@@ -90,20 +90,20 @@ class SpiderController extends AsyncNotifier<SpiderState> {
   int get freeHintsRemaining => _freeHintsRemaining;
 
   /// Подсказка: бесплатные попытки или реклама ([needsReward]).
-  ({String? tag, bool needsReward, bool noMoves}) takeHintOrPrepareReward() {
+  ({SpiderHint? hint, bool needsReward, bool noMoves}) takeHintOrPrepareReward() {
     final current = state.asData?.value;
-    if (current == null) return (tag: null, needsReward: false, noMoves: true);
+    if (current == null) return (hint: null, needsReward: false, noMoves: true);
     if (_freeHintsRemaining <= 0) {
-      return (tag: null, needsReward: true, noMoves: false);
+      return (hint: null, needsReward: true, noMoves: false);
     }
-    final tag = _engine.hint(current);
-    if (tag == null) {
-      return (tag: null, needsReward: false, noMoves: true);
+    final h = _engine.hint(current);
+    if (h == null) {
+      return (hint: null, needsReward: false, noMoves: true);
     }
     _freeHintsRemaining--;
     final board = state.asData!.value;
     unawaited(_persist(board));
-    return (tag: tag, needsReward: false, noMoves: false);
+    return (hint: h, needsReward: false, noMoves: false);
   }
 
   Future<void> undo() async {

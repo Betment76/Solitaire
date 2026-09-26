@@ -3,6 +3,69 @@ import 'dart:math';
 import '../../../core/models/card.dart';
 import 'freecell_state.dart';
 
+/// Подсказка FreeCell: машинный тип хода (перевод и подсветка — на экране).
+sealed class FreecellHint {
+  const FreecellHint();
+}
+
+/// Верхняя карта колонки [col] → дом.
+class HintFcTableauToFoundation extends FreecellHint {
+  const HintFcTableauToFoundation(this.col);
+  final int col;
+
+  @override
+  bool operator ==(Object other) =>
+      other is HintFcTableauToFoundation && other.col == col;
+
+  @override
+  int get hashCode => Object.hash(HintFcTableauToFoundation, col);
+}
+
+/// Карта из ячейки [cell] → дом.
+class HintFcCellToFoundation extends FreecellHint {
+  const HintFcCellToFoundation(this.cell);
+  final int cell;
+
+  @override
+  bool operator ==(Object other) =>
+      other is HintFcCellToFoundation && other.cell == cell;
+
+  @override
+  int get hashCode => Object.hash(HintFcCellToFoundation, cell);
+}
+
+/// Верхняя карта колонки [from] → колонка [to].
+class HintFcTableauToTableau extends FreecellHint {
+  const HintFcTableauToTableau(this.from, this.to);
+  final int from;
+  final int to;
+
+  @override
+  bool operator ==(Object other) =>
+      other is HintFcTableauToTableau &&
+      other.from == from &&
+      other.to == to;
+
+  @override
+  int get hashCode => Object.hash(HintFcTableauToTableau, from, to);
+}
+
+/// Верхняя карта колонки [col] → свободная ячейка [cell].
+class HintFcTableauToCell extends FreecellHint {
+  const HintFcTableauToCell(this.col, this.cell);
+  final int col;
+  final int cell;
+
+  @override
+  bool operator ==(Object other) =>
+      other is HintFcTableauToCell &&
+      other.col == col &&
+      other.cell == cell;
+
+  @override
+  int get hashCode => Object.hash(HintFcTableauToCell, col, cell);
+}
+
 /// Движок правил FreeCell (MVP).
 class FreecellEngine {
   FreecellState newGame({int? seed}) {
@@ -283,25 +346,22 @@ class FreecellEngine {
     return cells;
   }
 
-  /// Подсказка: машинный тег хода (перевод — на экране через AppStrings).
-  /// Приоритет: ход в foundation > ход на tableau > запасная ячейка.
-  /// Теги: `fc_tableau_to_foundation_{col}`, `fc_cell_to_foundation_{cell}`,
-  /// `fc_tableau_to_tableau_{from}_{to}`, `fc_tableau_to_cell_{col}_{cell}`.
-  String? hint(FreecellState state) {
+  /// Подсказка: машинный тип хода или null. Приоритет: foundation > tableau > ячейка.
+  FreecellHint? hint(FreecellState state) {
     if (state.isWin) return null;
     // 1. Ход в foundation: из колонок, затем из ячеек.
     for (var c = 0; c < state.tableau.length; c++) {
       final pile = state.tableau[c];
       if (pile.isEmpty) continue;
       if (_canMoveToFoundation(pile.last, state.foundations[pile.last.suit]!)) {
-        return 'fc_tableau_to_foundation_$c';
+        return HintFcTableauToFoundation(c);
       }
     }
     for (var i = 0; i < state.freeCells.length; i++) {
       final card = state.freeCells[i];
       if (card == null) continue;
       if (_canMoveToFoundation(card, state.foundations[card.suit]!)) {
-        return 'fc_cell_to_foundation_$i';
+        return HintFcCellToFoundation(i);
       }
     }
     // 2. Ход на tableau: ищем карту, которую можно куда-то положить.
@@ -310,7 +370,7 @@ class FreecellEngine {
       if (pile.isEmpty) continue;
       final targets = getLegalTableauTargets(state, c);
       if (targets.isNotEmpty) {
-        return 'fc_tableau_to_tableau_${c}_${targets.first}';
+        return HintFcTableauToTableau(c, targets.first);
       }
     }
     // 3. Запасная свободная ячейка.
@@ -318,7 +378,7 @@ class FreecellEngine {
     if (emptyCells.isNotEmpty) {
       for (var c = 0; c < state.tableau.length; c++) {
         if (state.tableau[c].isNotEmpty) {
-          return 'fc_tableau_to_cell_${c}_${emptyCells.first}';
+          return HintFcTableauToCell(c, emptyCells.first);
         }
       }
     }

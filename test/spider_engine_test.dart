@@ -234,7 +234,7 @@ void main() {
           for (var i = 0; i < 8; i++) [filler],
         ],
       );
-      expect(engine.hint(state), 'spider_move_0_0_to_1');
+      expect(engine.hint(state), const HintSpiderMove(0, 0, 1));
     });
 
     test('dealFromStock: пустой stock не меняет состояние', () {
