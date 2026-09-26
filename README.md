@@ -65,6 +65,22 @@ flutter run --flavor rustore
 # Google Play: flutter run --flavor gplay --dart-define=STORE=gplay
 ```
 
+### Сборка релизов
+
+`--flavor` обязателен для любой Android-сборки: без него сборка пройдёт,
+но тул не найдёт артефакт («Gradle build failed to produce an .aab file»).
+
+```bash
+# RuStore
+flutter build appbundle --release --flavor rustore
+flutter build apk --release --flavor rustore
+
+# Google Play
+flutter build appbundle --release --flavor gplay --dart-define=STORE=gplay
+```
+
+Артефакты: `build/app/outputs/bundle/<flavor>Release/app-<flavor>-release.aab`.
+
 ## Проверки качества
 
 ### Статический анализ
