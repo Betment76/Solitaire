@@ -11,6 +11,9 @@ import 'models/challenge.dart';
 import 'leaderboard_score.dart';
 import 'models/record_entry.dart';
 import 'models/unlockable_style.dart';
+import '../features/freecell/domain/freecell_persistence.dart';
+import '../features/klondike/domain/klondike_persistence.dart';
+import '../features/spider/domain/spider_persistence.dart';
 
 final localStoreProvider = Provider<LocalStore>((_) => LocalStore());
 
@@ -269,12 +272,22 @@ class SavedGameInfo {
   final String variant;
 }
 
-/// Провайдер, проверяющий наличие сохранённых партий (Косынка, Паук, FreeCell).
+/// Провайдер, проверяющий наличие НЕЗАВЕРШЁННЫХ партий (Косынка, Паук, FreeCell).
+/// Победённая партия «продолжаемой» не является.
 final hasSavedGameProvider = FutureProvider<SavedGameInfo?>((ref) async {
   final store = ref.watch(localStoreProvider);
-  if (await store.hasSavedKlondike()) return const SavedGameInfo(route: '/klondike', variant: 'klondike');
-  if (await store.hasSavedSpider()) return const SavedGameInfo(route: '/spider', variant: 'spider');
-  if (await store.hasSavedFreecell()) return const SavedGameInfo(route: '/freecell', variant: 'freecell');
+  final klondike = KlondikePersistence.fromMap(await store.loadKlondikeState());
+  if (klondike != null && !klondike.state.isWin) {
+    return const SavedGameInfo(route: '/klondike', variant: 'klondike');
+  }
+  final spider = SpiderPersistence.fromMap(await store.loadSpiderState());
+  if (spider != null && !spider.state.isWin) {
+    return const SavedGameInfo(route: '/spider', variant: 'spider');
+  }
+  final freecell = FreecellPersistence.fromMap(await store.loadFreecellState());
+  if (freecell != null && !freecell.state.isWin) {
+    return const SavedGameInfo(route: '/freecell', variant: 'freecell');
+  }
   return null;
 });
 

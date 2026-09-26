@@ -64,7 +64,9 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
     final restored = KlondikePersistence.fromMap(saved);
     _undo.clear();
     _redo.clear();
-    if (restored != null) {
+    // Победённую партию не восстанавливаем (лечит и старые сейвы-победы):
+    // «продолжать» нечего — начинаем новую.
+    if (restored != null && !restored.state.isWin) {
       _drawCount = restored.state.drawCount;
       _dailySessionYmd = restored.dailyYmd;
       _freeHintsRemaining = restored.freeHintsRemaining;
@@ -339,8 +341,12 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
     _undo.add(current);
     _redo.clear();
     state = AsyncData(next);
-    unawaited(_persist(next));
+    // Победа — партия закончена: сейв не храним, чтобы меню не предлагало «Продолжить».
+    unawaited(next.isWin ? _clearSavedGame() : _persist(next));
   }
+
+  Future<void> _clearSavedGame() =>
+      ref.read(localStoreProvider).clearSavedKlondike();
 
   Future<void> _persist(KlondikeState value) async {
     await ref.read(localStoreProvider).saveKlondikeState(

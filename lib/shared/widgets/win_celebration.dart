@@ -87,17 +87,21 @@ class _WinCelebrationState extends State<WinCelebration>
     final textTheme = Theme.of(context).textTheme;
     final s = AppStrings.of(Localizations.localeOf(context));
 
-    return Stack(
-      children: [
-        Container(color: Colors.black.withValues(alpha: 0.6)),
-        // Конфетти анимируются изолированно: статичный контент не пересобирается каждый кадр.
-        AnimatedBuilder(
-          animation: _controller,
-          builder: (context, _) => CustomPaint(
-            size: size,
-            painter: _ConfettiPainter(_particles, _controller.value),
+    // Material обязателен — без него debug-сборка рисует жёлтые двойные
+    // подчёркивания под текстом (как в unlock_overlay.dart).
+    return Material(
+      type: MaterialType.transparency,
+      child: Stack(
+        children: [
+          Container(color: Colors.black.withValues(alpha: 0.6)),
+          // Конфетти анимируются изолированно: статичный контент не пересобирается каждый кадр.
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) => CustomPaint(
+              size: size,
+              painter: _ConfettiPainter(_particles, _controller.value),
+            ),
           ),
-        ),
         Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -163,7 +167,8 @@ class _WinCelebrationState extends State<WinCelebration>
             ],
           ),
         ),
-      ],
+          ],
+        ),
     );
   }
 }

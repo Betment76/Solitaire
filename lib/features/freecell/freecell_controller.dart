@@ -45,7 +45,8 @@ class FreecellController extends AsyncNotifier<FreecellState> {
     final restored = FreecellPersistence.fromMap(saved);
     _undo.clear();
     _redo.clear();
-    if (restored != null) {
+    // Победённую партию не восстанавливаем — «продолжать» нечего.
+    if (restored != null && !restored.state.isWin) {
       _undoBudget = restored.undoBudget;
       _usedUndo = false;
       _usedFreeCells = false;
@@ -258,8 +259,12 @@ class FreecellController extends AsyncNotifier<FreecellState> {
     _undo.add(current);
     _redo.clear();
     state = AsyncData(next);
-    unawaited(_persist(next));
+    // Победа — партия закончена: сейв не храним.
+    unawaited(next.isWin ? _clearSavedGame() : _persist(next));
   }
+
+  Future<void> _clearSavedGame() =>
+      ref.read(localStoreProvider).clearSavedFreecell();
 
   Future<void> _finishDailyWin(String day, int moves, int seconds) async {
     final store = ref.read(localStoreProvider);

@@ -44,7 +44,8 @@ class SpiderController extends AsyncNotifier<SpiderState> {
     final appSettings = await ref.read(settingsProvider.future);
     _undo.clear();
     _redo.clear();
-    if (restored != null) {
+    // Победённую партию не восстанавливаем — «продолжать» нечего.
+    if (restored != null && !restored.state.isWin) {
       _undoBudget = restored.undoBudget;
       _usedUndo = false;
       _freeHintsRemaining = restored.freeHintsRemaining;
@@ -198,8 +199,12 @@ class SpiderController extends AsyncNotifier<SpiderState> {
     _undo.add(current);
     _redo.clear();
     state = AsyncData(next);
-    unawaited(_persist(next));
+    // Победа — партия закончена: сейв не храним.
+    unawaited(next.isWin ? _clearSavedGame() : _persist(next));
   }
+
+  Future<void> _clearSavedGame() =>
+      ref.read(localStoreProvider).clearSavedSpider();
 
   Future<void> _persist(SpiderState value) async {
     await ref.read(localStoreProvider).saveSpiderState(
