@@ -9,7 +9,7 @@ bool _updatePromptShownThisSession = false;
 
 /// Проверяет обновление в соответствующем магазине и запускает штатный
 /// сценарий обновления: RuStore (`--flavor rustore`) или
-/// Google Play In-App Updates (`--flavor gplay --dart-define=STORE=gplay`).
+/// Google Play In-App Updates (`--flavor googleplay --dart-define-from-file=config/dart_defines/googleplay.json`).
 ///
 /// Один вызов за сессию; на устройствах без магазина (и в тестах) ошибки
 /// проглатываются — игра работает без обновлений.

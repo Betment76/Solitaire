@@ -22,15 +22,15 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
-    // Магазины распространения: rustore (по умолчанию) и gplay.
+    // Магазины распространения: rustore (по умолчанию) и googleplay.
     // Сборки: flutter build appbundle --release --flavor rustore
-    //         flutter build appbundle --release --flavor gplay --dart-define=STORE=gplay
+    //         flutter build appbundle --release --flavor googleplay --dart-define-from-file=config/dart_defines/googleplay.json
     flavorDimensions += "store"
     productFlavors {
         create("rustore") {
             dimension = "store"
         }
-        create("gplay") {
+        create("googleplay") {
             dimension = "store"
         }
     }

@@ -62,7 +62,7 @@ flutter pub get
 
 ```bash
 flutter run --flavor rustore
-# Google Play: flutter run --flavor gplay --dart-define=STORE=gplay
+# Google Play: flutter run --flavor googleplay --dart-define-from-file=config/dart_defines/googleplay.json
 ```
 
 ### Сборка релизов
@@ -76,7 +76,7 @@ flutter build appbundle --release --flavor rustore
 flutter build apk --release --flavor rustore
 
 # Google Play
-flutter build appbundle --release --flavor gplay --dart-define=STORE=gplay
+flutter build appbundle --release --flavor googleplay --dart-define-from-file=config/dart_defines/googleplay.json
 ```
 
 Артефакты: `build/app/outputs/bundle/<flavor>Release/app-<flavor>-release.aab`.

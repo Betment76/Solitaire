@@ -7,7 +7,7 @@ import 'store_target.dart';
 
 /// Запрашивает оценку приложения в соответствующем магазине:
 /// RuStore Review (`--flavor rustore`) или Google Play In-App Review
-/// (`--flavor gplay --dart-define=STORE=gplay`).
+/// (`--flavor googleplay --dart-define-from-file=config/dart_defines/googleplay.json`).
 ///
 /// Если магазин недоступен — тихо выходим.
 Future<void> requestStoreReview() async {

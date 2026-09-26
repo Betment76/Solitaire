@@ -30,7 +30,7 @@ jobs:
         run: flutter build appbundle --release --flavor rustore
 
       - name: Build AppBundle (Google Play)
-        run: flutter build appbundle --release --flavor gplay --dart-define=STORE=gplay
+        run: flutter build appbundle --release --flavor googleplay --dart-define-from-file=config/dart_defines/googleplay.json
 
       - name: Upload APK (RuStore)
         uses: actions/upload-artifact@v4
@@ -47,8 +47,8 @@ jobs:
       - name: Upload AppBundle (Google Play)
         uses: actions/upload-artifact@v4
         with:
-          name: aab-gplay-release
-          path: build/app/outputs/bundle/gplayRelease/app-gplay-release.aab
+          name: aab-googleplay-release
+          path: build/app/outputs/bundle/googleplayRelease/app-googleplay-release.aab
 
   build-web:
     runs-on: ubuntu-latest
