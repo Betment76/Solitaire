@@ -127,6 +127,12 @@ class SettingsScreen extends ConsumerWidget {
                   if (r != null) save(data.copyWith(themeMode: r.value));
                 },
               ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.privacy_tip_outlined),
+                title: Text(s.t('privacyPolicy')),
+                onTap: () => Navigator.pushNamed(context, '/privacy'),
+              ),
             ],
           ),
         ),

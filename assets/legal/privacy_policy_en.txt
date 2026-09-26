@@ -1,0 +1,51 @@
+PRIVACY POLICY
+of the «Solitaire» mobile application
+
+Last updated: 27.09.2026
+
+1. GENERAL PROVISIONS
+
+1.1. This Privacy Policy (the "Policy") describes what data the «Solitaire» mobile application (the "Application") processes and applies to all versions of the Application for Android and iOS.
+
+1.2. By using the Application you agree to this Policy. If you do not agree with its terms — do not use the Application.
+
+1.3. The Application does not require registration: we do not request or receive your name, e-mail address, phone number or any other contact or account data.
+
+2. WHAT DATA IS PROCESSED
+
+2.1. Game data. Settings, statistics, game results and the current game are stored ONLY on your device. We do not access them and do not receive them on our servers.
+
+2.2. Analytics (AppMetrica, operated by YANDEX, LLC). The Application collects anonymized usage statistics: facts of application launches and finished games, OS version, device model, system language, device advertising identifier, IP address, and application crash data. Location tracking is disabled.
+
+2.3. Advertising (Yandex Advertising Network, Yandex Mobile Ads). The Application displays ads. To serve and measure ads, Yandex processes the device advertising identifier, device information and ad impression data. Such processing is performed under Yandex's terms and privacy policy: https://yandex.ru/legal/confidential/
+
+2.4. No other personal data (name, phone number, address, payment details) is processed, since the Application has no registration and no purchases.
+
+3. PURPOSES OF PROCESSING
+
+- operating and improving the Application;
+- counting anonymized usage statistics;
+- diagnosing crashes and errors;
+- displaying advertising and measuring its effectiveness.
+
+4. SHARING WITH THIRD PARTIES
+
+4.1. The data described in sections 2.2 and 2.3 is processed by Yandex services (AppMetrica and the Yandex Advertising Network).
+
+4.2. Data is not transferred or sold to any other third parties. Game data is never transferred anywhere, as it is stored only on your device.
+
+5. STORAGE AND OPT-OUT
+
+5.1. Game data is stored locally on the device and is deleted when the Application is uninstalled.
+
+5.2. You may restrict the processing of the advertising identifier in your operating system settings (Android: "Ads" — opt out of personalization; iOS: "Privacy" — tracking restrictions). The Application will continue to work in full.
+
+5.3. You may opt out of analytics by disabling data sending for the Application in the operating system settings, or contact us at the address in section 7.
+
+6. CHANGES TO THE POLICY
+
+6.1. The developer may amend this Policy. The current version is always available in the Application under "Settings — Privacy policy".
+
+7. CONTACTS
+
+7.1. For any questions regarding this Policy and data processing, write to: support@мойсофт.рф

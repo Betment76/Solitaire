@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/freecell/freecell_screen.dart';
 import '../features/klondike/klondike_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/settings/privacy_policy_screen.dart';
 import '../features/stats/stats_screen.dart';
 import '../features/style/style_screen.dart';
 import '../features/solitaire_selector/selector_screen.dart';
@@ -72,6 +73,7 @@ class SolitaireApp extends ConsumerWidget {
         '/style': (_) => const StyleScreen(),
         '/achievements': (_) => const AchievementsScreen(),
         '/challenges': (_) => const ChallengeScreen(),
+        '/privacy': (_) => const PrivacyPolicyScreen(),
       },
       builder: (context, child) => Stack(
         children: [

@@ -37,17 +37,18 @@ Future<void> initAppMetricaIfConfigured() async {
     await AppMetrica.activate(
       AppMetricaConfig(
         kAppmetricaApiKey,
-        // Включаем максимум доступной авто-аналитики SDK.
-        advIdentifiersTracking: true,
+        // Включаем только то, что реально нужно игре и описано в политике
+        // конфиденциальности (assets/legal/privacy_policy*.txt).
+        advIdentifiersTracking: true, // рекламный идентификатор: показ и измерение рекламы
         anrMonitoring: true,
-        appOpenTrackingEnabled: true,
         crashReporting: true,
         flutterCrashReporting: true,
         nativeCrashReporting: true,
         dataSendingEnabled: true,
-        revenueAutoTrackingEnabled: true,
         sessionsAutoTrackingEnabled: true,
-        locationTracking: true,
+        // Лишнее отключено: покупок в приложении нет, гео-функций нет.
+        revenueAutoTrackingEnabled: false,
+        locationTracking: false,
         // Подробные логи оставляем только в debug, чтобы не шуметь в release.
         logs: kDebugMode,
       ),
