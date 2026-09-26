@@ -522,7 +522,7 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
                                               final right = _state.drawCount == 3
                                                   ? 10.0 * index
                                                   : 0.0;
-                                              final cardWidget = PlayingCardView(card: card);
+                                              final cardWidget = PlayingCardView(card: card, height: _cardHeight);
                                               final wasteW = _tableauCardWidth(context);
                                               return Positioned(
                                                 right: right,
@@ -754,7 +754,7 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
       children: [
         _state.stock.isEmpty
             ? _emptyTopCard()
-            : const PlayingCardView.back(),
+            : PlayingCardView.back(height: _cardHeight),
         Positioned(
           left: 4,
           bottom: 4,
@@ -808,6 +808,7 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
                 child: PlayingCardView(
                   key: ValueKey('f-${pile.last.suit.name}-${pile.last.rank}'),
                   card: pile.last,
+                  height: _cardHeight,
                 ),
               ),
           ],
@@ -860,6 +861,7 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
               child: PlayingCardView(
                 key: ValueKey('f-drag-${top.suit.name}-${top.rank}'),
                 card: top,
+                height: _cardHeight,
               ),
             ),
           ),
@@ -947,7 +949,7 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
     final card = pile[idx];
     final isPulseTarget =
         _dropPulseColumn == columnIndex && idx == pile.length - 1;
-    final cardWidget = PlayingCardView(card: card);
+    final cardWidget = PlayingCardView(card: card, height: _cardHeight);
     final pulsedCardWidget = AnimatedScale(
       duration: const Duration(milliseconds: 150),
       curve: Curves.easeOutCubic,
@@ -987,7 +989,7 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
               top: i * _tableauStep,
               left: 0,
               right: 0,
-              child: PlayingCardView(card: run[i]),
+              child: PlayingCardView(card: run[i], height: _cardHeight),
             ),
         ],
       ),
