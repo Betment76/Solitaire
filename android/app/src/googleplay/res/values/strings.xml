@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Имя под иконкой для витрины Google Play. -->
+    <string name="app_name">My Solitaires</string>
+</resources>
