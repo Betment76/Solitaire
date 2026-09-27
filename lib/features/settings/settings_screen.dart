@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_table_background.dart';
 import '../../core/store/store_review.dart';
+import '../../shared/widgets/clickable_logo_widget.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/models/app_settings.dart';
 import '../../core/providers.dart';
@@ -141,6 +142,9 @@ class SettingsScreen extends ConsumerWidget {
                 title: Text(s.t('privacyPolicy')),
                 onTap: () => Navigator.pushNamed(context, '/privacy'),
               ),
+              const SizedBox(height: 8),
+              // Бренд МойСофт: тап открывает каталог разработчика в RuStore.
+              const Center(child: ClickableLogoWidget()),
             ],
           ),
         ),
