@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.9+18
+
+### 🔧 Качество сборки
+- **DEX-оптимизация под метрики Google Play** (было 24% при пороге 25%): включён оптимизирующий профиль R8 (`proguard-android-optimize.txt`), `-allowaccessmodification` и `-repackageclasses ''` (перепаковка классов). Несжатые DEX: 6.88 → 6.54 МБ.
+- **Аудит разрешений** (6 в merged manifest): все используются — INTERNET и AD_ID (наши/реклама), ACCESS_NETWORK_STATE и RECEIVE_BOOT_COMPLETED (Яндекс/AppMetrica), BIND_GET_INSTALL_REFERRER_SERVICE (атрибуция установок Play), DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION (служебное от AGP). Неиспользуемых нет.
+
 ## 1.2.8+17
 
 ### 🎨 UI

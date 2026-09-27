@@ -70,8 +70,13 @@ android {
             }
             // R8: требование качества Google Play (2027) + минус мегабайты:
             // неиспользуемый нативный код магазина-соперника вырезается из флавора.
+            // Оптимизирующий профиль + наши правила — метрики DEX-оптимизации Play.
             isMinifyEnabled = true
             isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
