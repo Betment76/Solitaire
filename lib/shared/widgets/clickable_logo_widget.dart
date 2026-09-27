@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -41,11 +43,30 @@ class ClickableLogoWidget extends StatelessWidget {
         children: [
           GestureDetector(
             onTap: _openUrl,
-            child: Image.asset(
-              logoAsset,
-              height: height,
-              fit: BoxFit.contain,
-              errorBuilder: (_, _, _) => SizedBox(height: height),
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                // Белое свечение по форме логотипа: размытый белый силуэт
+                // под основным изображением — читается на тёмном сукне.
+                ImageFiltered(
+                  imageFilter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                  child: Image.asset(
+                    logoAsset,
+                    height: height,
+                    fit: BoxFit.contain,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    colorBlendMode: BlendMode.srcIn,
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                  ),
+                ),
+                Image.asset(
+                  logoAsset,
+                  height: height,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => SizedBox(height: height),
+                ),
+              ],
             ),
           ),
           if (copyrightText != null && copyrightText!.isNotEmpty) ...[
