@@ -831,7 +831,7 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
       }),
       onDragEnd: (_) => setState(_resetDragState),
       onDragCompleted: () => setState(_resetDragState),
-      onDraggableCanceled: (_, __) => setState(_resetDragState),
+      onDraggableCanceled: (_, _) => setState(_resetDragState),
       // Без доп. увеличения, чтобы карта не выглядела "выросшей" при перетаскивании.
       feedback: Material(color: Colors.transparent, child: runFeedback),
       // Оставляем легкий плейсхолдер, чтобы карта визуально не "исчезала" при drag.

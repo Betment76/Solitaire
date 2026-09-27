@@ -77,7 +77,7 @@ class SolitaireApp extends ConsumerWidget {
       },
       builder: (context, child) => Stack(
         children: [
-          if (child != null) child,
+          ?child,
           const UnlockOverlay(),
         ],
       ),

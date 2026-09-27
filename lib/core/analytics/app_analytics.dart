@@ -65,7 +65,7 @@ Future<void> reportGameWin(
     await AppMetrica.reportEventWithMap('game_win', {
       'mode': _mode(mode),
       'daily_challenge': dailyChallenge,
-      if (klondikeScore != null) 'score': klondikeScore,
+      'score': ?klondikeScore,
     });
   });
 }
@@ -79,7 +79,7 @@ Future<void> reportGameStart(
     await AppMetrica.reportEventWithMap('game_start', {
       'mode': _mode(mode),
       'daily_challenge': dailyChallenge,
-      if (spiderSuitCount != null) 'spider_suit_count': spiderSuitCount,
+      'spider_suit_count': ?spiderSuitCount,
     });
   });
 }

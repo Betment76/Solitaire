@@ -36,7 +36,7 @@ class KlondikePersistence {
     return {
       'version': _schemaVersion,
       'mode': _mode,
-      if (dailyYmd != null) 'dailyYmd': dailyYmd,
+      'dailyYmd': ?dailyYmd,
       'freeHintsRemaining': freeHintsRemaining,
       'dailyRewardRetryUsed': dailyRewardRetryUsed,
       'undoBudget': undoBudget,

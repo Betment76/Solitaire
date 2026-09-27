@@ -544,7 +544,7 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
                                                           _dragFromCardIndex = null;
                                                           _activeDragPayload = null;
                                                         }),
-                                                        onDraggableCanceled: (_, __) => setState(() {
+                                                        onDraggableCanceled: (_, _) => setState(() {
                                                           _dragFromColumn = null;
                                                           _dragFromCardIndex = null;
                                                           _activeDragPayload = null;
@@ -849,7 +849,7 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
             _dragFromCardIndex = null;
             _activeDragPayload = null;
           }),
-          onDraggableCanceled: (_, __) => setState(() {
+          onDraggableCanceled: (_, _) => setState(() {
             _dragFromColumn = null;
             _dragFromCardIndex = null;
             _activeDragPayload = null;
@@ -1012,7 +1012,7 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
         _dragFromCardIndex = null;
         _activeDragPayload = null;
       }),
-      onDraggableCanceled: (_, __) => setState(() {
+      onDraggableCanceled: (_, _) => setState(() {
         _dragFromColumn = null;
         _dragFromCardIndex = null;
         _activeDragPayload = null;

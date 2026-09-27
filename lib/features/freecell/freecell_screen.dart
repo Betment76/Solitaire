@@ -563,7 +563,7 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
               }),
               onDragEnd: (_) => _clearFcDrag(),
               onDragCompleted: _clearFcDrag,
-              onDraggableCanceled: (_, __) => _clearFcDrag(),
+              onDraggableCanceled: (_, _) => _clearFcDrag(),
               feedback: Material(
                 color: Colors.transparent,
                 child: PlayingCardView(card: card, width: w, height: _smallCardHeight),
@@ -633,7 +633,7 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
               }),
               onDragEnd: (_) => _clearFcDrag(),
               onDragCompleted: _clearFcDrag,
-              onDraggableCanceled: (_, __) => _clearFcDrag(),
+              onDraggableCanceled: (_, _) => _clearFcDrag(),
               feedback: Material(
                 color: Colors.transparent,
                 child: PlayingCardView(card: pile.last, width: w, height: _smallCardHeight),
@@ -712,7 +712,7 @@ class _FreecellScreenState extends ConsumerState<FreecellScreen> {
                                 },
                                 onDragEnd: (_) => _clearFcDrag(),
                                 onDragCompleted: _clearFcDrag,
-                                onDraggableCanceled: (_, __) => _clearFcDrag(),
+                                onDraggableCanceled: (_, _) => _clearFcDrag(),
                                 feedback: Material(
                                   color: Colors.transparent,
                                   child: _runDragFeedback(pile, i, cardWidth),

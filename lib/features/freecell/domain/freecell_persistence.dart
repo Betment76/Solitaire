@@ -30,7 +30,7 @@ class FreecellPersistence {
     return {
       'version': _schemaVersion,
       'mode': _mode,
-      if (dailyYmd != null) 'dailyYmd': dailyYmd,
+      'dailyYmd': ?dailyYmd,
       'payload': {
         'moves': state.moves,
         'extraFreeCellSlots': state.extraFreeCellSlots,

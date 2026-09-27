@@ -167,7 +167,7 @@ class _SelectorScreenState extends ConsumerState<SelectorScreen> {
                                   style: const TextStyle(color: Colors.white60, fontSize: 12),
                                 ),
                                 loading: () => const SizedBox.shrink(),
-                                error: (_, __) => const SizedBox.shrink(),
+                                error: (_, _) => const SizedBox.shrink(),
                               ),
                               bestKlondikeTime.when(
                                 data: (t) => t == null
@@ -183,7 +183,7 @@ class _SelectorScreenState extends ConsumerState<SelectorScreen> {
                                         ),
                                       ),
                                 loading: () => const SizedBox.shrink(),
-                                error: (_, __) => const SizedBox.shrink(),
+                                error: (_, _) => const SizedBox.shrink(),
                               ),
                             ],
                           ),
@@ -212,7 +212,7 @@ class _SelectorScreenState extends ConsumerState<SelectorScreen> {
                                   style: const TextStyle(color: Colors.white60, fontSize: 12),
                                 ),
                                 loading: () => const SizedBox.shrink(),
-                                error: (_, __) => const SizedBox.shrink(),
+                                error: (_, _) => const SizedBox.shrink(),
                               ),
                               bestFcTime.when(
                                 data: (t) => t == null
@@ -225,7 +225,7 @@ class _SelectorScreenState extends ConsumerState<SelectorScreen> {
                                         ),
                                       ),
                                 loading: () => const SizedBox.shrink(),
-                                error: (_, __) => const SizedBox.shrink(),
+                                error: (_, _) => const SizedBox.shrink(),
                               ),
                             ],
                           ),
@@ -316,7 +316,7 @@ class _WinStreakWidget extends ConsumerWidget {
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 }
@@ -362,7 +362,7 @@ class _ModeTile extends StatelessWidget {
                           child: Image.asset(
                             imagePath,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, _, __) => Container(
+                            errorBuilder: (context, _, _) => Container(
                               color: Colors.white12,
                               alignment: Alignment.center,
                               child: const Icon(
