@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/analytics/app_analytics.dart';
+import '../../core/controllers/game_session_controller.dart';
 import '../../core/audio/sound_service.dart';
 import '../../core/models/app_stats.dart';
 import '../../core/providers.dart';
@@ -14,15 +15,10 @@ final spiderControllerProvider =
     AsyncNotifierProvider<SpiderController, SpiderState>(SpiderController.new);
 
 /// Контроллер состояния Паука: новая игра, ходы, undo/redo, сохранение, раздача.
-class SpiderController extends AsyncNotifier<SpiderState> {
+class SpiderController extends AsyncNotifier<SpiderState>
+    with GameSessionController<SpiderState> {
   final SpiderEngine _engine = SpiderEngine();
-  final List<SpiderState> _undo = <SpiderState>[];
-  final List<SpiderState> _redo = <SpiderState>[];
 
-  /// Бесплатные отмены за текущую партию (добор через rewarded).
-  int _undoBudget = 5;
-  /// Был ли хоть раз использован Undo за эту партию.
-  bool _usedUndo = false;
   /// Количество мастей в текущей партии (для проверки испытаний).
   int _currentSuitCount = 1;
   /// Секунды с экрана (для рекордов и экрана победы).
@@ -30,30 +26,20 @@ class SpiderController extends AsyncNotifier<SpiderState> {
   /// Бесплатные подсказки за партию (добор через rewarded).
   int _freeHintsRemaining = 3;
 
-  bool get canUndo => _undo.isNotEmpty;
-  bool get canRedo => _redo.isNotEmpty;
-  bool get canUndoWithBudget => canUndo && _undoBudget > 0;
-  /// Оставшиеся бесплатные отмены (добор через rewarded).
-  int get undoBudgetRemaining => _undoBudget;
-
   @override
   Future<SpiderState> build() async {
     final saved = await ref.read(localStoreProvider).loadSpiderState();
     final restored = SpiderPersistence.fromMap(saved);
     // Настройки "Паук: количество мастей" влияют только на новую раздачу.
     final appSettings = await ref.read(settingsProvider.future);
-    _undo.clear();
-    _redo.clear();
+    resetSession();
     // Победённую партию не восстанавливаем — «продолжать» нечего.
     if (restored != null && !restored.state.isWin) {
-      _undoBudget = restored.undoBudget;
-      _usedUndo = false;
+      restoreSession(undoBudget: restored.undoBudget);
       _freeHintsRemaining = restored.freeHintsRemaining;
       _currentSuitCount = restored.suitCount;
       return restored.state;
     }
-    _undoBudget = 5;
-    _usedUndo = false;
     _freeHintsRemaining = 3;
     _currentSuitCount = appSettings.spiderSuitCount;
     return _engine.newGame(
@@ -73,18 +59,13 @@ class SpiderController extends AsyncNotifier<SpiderState> {
       seed: DateTime.now().millisecondsSinceEpoch,
       suitCount: appSettings.spiderSuitCount,
     );
-    _undo.clear();
-    _redo.clear();
-    _undoBudget = 5;
-    _usedUndo = false;
+    resetSession();
     _freeHintsRemaining = 3;
     _currentSuitCount = appSettings.spiderSuitCount;
     state = AsyncData(next);
-    await _persist(next);
+    await persist(next);
     unawaited(reportGameStart(SolitaireVariant.spider, spiderSuitCount: appSettings.spiderSuitCount));
   }
-
-  void grantUndoFromReward() => _undoBudget++;
 
   void grantHintFromReward() => _freeHintsRemaining++;
 
@@ -103,50 +84,29 @@ class SpiderController extends AsyncNotifier<SpiderState> {
     }
     _freeHintsRemaining--;
     final board = state.asData!.value;
-    unawaited(_persist(board));
+    unawaited(persist(board));
     return (hint: h, needsReward: false, noMoves: false);
-  }
-
-  Future<void> undo() async {
-    final current = state.asData?.value;
-    if (current == null || _undo.isEmpty) return;
-    if (_undoBudget <= 0) return;
-    _undoBudget--;
-    _usedUndo = true;
-    final prev = _undo.removeLast();
-    _redo.add(current);
-    state = AsyncData(prev);
-    await _persist(prev);
-  }
-
-  Future<void> redo() async {
-    final current = state.asData?.value;
-    if (current == null || _redo.isEmpty) return;
-    final next = _redo.removeLast();
-    _undo.add(current);
-    state = AsyncData(next);
-    await _persist(next);
   }
 
   Future<void> dealFromStock() async {
     final current = state.asData?.value;
     if (current == null) return;
     final next = _engine.dealFromStock(current);
-    _apply(current, next);
+    applyMove(current, next);
   }
 
   Future<void> moveRun(int fromColumn, int fromIndex, int toColumn) async {
     final current = state.asData?.value;
     if (current == null) return;
     final next = _engine.moveRun(current, fromColumn, fromIndex, toColumn);
-    _apply(current, next);
+    applyMove(current, next);
   }
 
   Future<void> autoMoveTop(int fromColumn) async {
     final current = state.asData?.value;
     if (current == null) return;
     final next = _engine.autoMoveTop(current, fromColumn);
-    _apply(current, next);
+    applyMove(current, next);
   }
 
   bool canDragRun(int fromColumn, int fromIndex) {
@@ -181,36 +141,38 @@ class SpiderController extends AsyncNotifier<SpiderState> {
     final current = state.asData?.value;
     if (current == null) return;
     final next = _engine.autoFinishAll(current);
-    _apply(current, next);
+    applyMove(current, next);
   }
 
-  void _apply(SpiderState current, SpiderState next) {
-    if (identical(next, current)) return;
-    if (!current.isWin && next.isWin) {
+  @override
+  void onMoveApplied(SpiderState previous, SpiderState next) {
+    if (!previous.isWin && next.isWin) {
       ref.read(soundServiceProvider).play(SoundEvent.win);
       unawaited(ref.read(statsProvider.notifier).recordGameWin(
         SolitaireVariant.spider,
         moves: next.moves,
         elapsedSeconds: elapsedSeconds,
-        usedUndo: _usedUndo,
+        usedUndo: usedUndo,
         spiderSuitCount: _currentSuitCount,
       ));
     }
-    _undo.add(current);
-    _redo.clear();
-    state = AsyncData(next);
+  }
+
+  @override
+  Future<void> saveState(SpiderState value) {
     // Победа — партия закончена: сейв не храним.
-    unawaited(next.isWin ? _clearSavedGame() : _persist(next));
+    return value.isWin ? _clearSavedGame() : persist(value);
   }
 
   Future<void> _clearSavedGame() =>
       ref.read(localStoreProvider).clearSavedSpider();
 
-  Future<void> _persist(SpiderState value) async {
+  @override
+  Future<void> persist(SpiderState value) async {
     await ref.read(localStoreProvider).saveSpiderState(
           SpiderPersistence.toMap(
             value,
-            undoBudget: _undoBudget,
+            undoBudget: undoBudgetRemaining,
             freeHintsRemaining: _freeHintsRemaining,
             suitCount: _currentSuitCount,
           ),

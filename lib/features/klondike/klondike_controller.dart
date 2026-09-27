@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/analytics/app_analytics.dart';
+import '../../core/controllers/game_session_controller.dart';
 import '../../core/audio/sound_service.dart';
 import '../../core/daily_seed.dart';
 import '../../core/models/app_stats.dart';
@@ -16,10 +17,9 @@ final klondikeControllerProvider =
     AsyncNotifierProvider<KlondikeController, KlondikeState>(KlondikeController.new);
 
 /// Контроллер состояния Косынки: новая игра, ходы, undo/redo, сохранение.
-class KlondikeController extends AsyncNotifier<KlondikeState> {
+class KlondikeController extends AsyncNotifier<KlondikeState>
+    with GameSessionController<KlondikeState> {
   final KlondikeEngine _engine = KlondikeEngine();
-  final List<KlondikeState> _undo = <KlondikeState>[];
-  final List<KlondikeState> _redo = <KlondikeState>[];
   int _drawCount = 1;
   /// Дата `YYYY-MM-DD` активной ежедневной партии (для рекорда по ходам).
   String? _dailySessionYmd;
@@ -28,11 +28,6 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
   int _freeHintsRemaining = 3;
   /// Вторая попытка ежедневного челленджа за рекламу (один раз за сессию дня).
   bool _dailyRewardRetryUsed = false;
-  /// Бесплатные отмены за партию (5), дальше — rewarded как в Пауке.
-  int _undoBudget = 5;
-  /// Был ли хоть раз использован Undo за эту партию.
-  bool _usedUndo = false;
-
   bool get isDailySession => _dailySessionYmd != null;
   bool get canOfferDailyRetryAd {
     final cur = state.asData?.value;
@@ -45,10 +40,6 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
   /// Оставшиеся бесплатные подсказки (добор через рекламу увеличивает счётчик).
   int get freeHintsRemaining => _freeHintsRemaining;
 
-  bool get canUndo => _undo.isNotEmpty;
-  bool get canRedo => _redo.isNotEmpty;
-  bool get canUndoWithBudget => canUndo && _undoBudget > 0;
-  int get undoBudgetRemaining => _undoBudget;
   int get drawCount => _drawCount;
 
   int _drawCountFromSettings() {
@@ -62,8 +53,7 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
   Future<KlondikeState> build() async {
     final saved = await ref.read(localStoreProvider).loadKlondikeState();
     final restored = KlondikePersistence.fromMap(saved);
-    _undo.clear();
-    _redo.clear();
+    resetSession();
     // Победённую партию не восстанавливаем (лечит и старые сейвы-победы):
     // «продолжать» нечего — начинаем новую.
     if (restored != null && !restored.state.isWin) {
@@ -71,14 +61,11 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
       _dailySessionYmd = restored.dailyYmd;
       _freeHintsRemaining = restored.freeHintsRemaining;
       _dailyRewardRetryUsed = restored.dailyRewardRetryUsed;
-      _undoBudget = restored.undoBudget;
-      _usedUndo = false;
+      restoreSession(undoBudget: restored.undoBudget);
       return restored.state;
     }
     _freeHintsRemaining = 3;
     _dailyRewardRetryUsed = false;
-    _undoBudget = 5;
-    _usedUndo = false;
     _drawCount = _drawCountFromSettings();
     return _engine.newGame(drawCount: _drawCount, seed: DateTime.now().millisecondsSinceEpoch);
   }
@@ -87,8 +74,7 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
     _dailySessionYmd = null;
     _freeHintsRemaining = 3;
     _dailyRewardRetryUsed = false;
-    _undoBudget = 5;
-    _usedUndo = false;
+    resetSession();
     final cur = state.asData?.value;
     if (cur != null && !cur.isWin) {
       unawaited(ref.read(statsProvider.notifier).recordGameAbandoned());
@@ -96,10 +82,8 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
     final dc = drawCount ?? _drawCountFromSettings();
     _drawCount = dc == 3 ? 3 : 1;
     final next = _engine.newGame(drawCount: _drawCount, seed: DateTime.now().millisecondsSinceEpoch);
-    _undo.clear();
-    _redo.clear();
     state = AsyncData(next);
-    await _persist(next);
+    await persist(next);
     unawaited(reportGameStart(SolitaireVariant.klondike));
   }
 
@@ -112,15 +96,12 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
     _dailySessionYmd = _todayYmd();
     _freeHintsRemaining = 3;
     _dailyRewardRetryUsed = false;
-    _undoBudget = 5;
-    _usedUndo = false;
+    resetSession();
     _drawCount = _drawCountFromSettings();
     final seed = klondikeDailySeed(_dailySessionYmd!);
     final next = _engine.newGame(drawCount: _drawCount, seed: seed);
-    _undo.clear();
-    _redo.clear();
     state = AsyncData(next);
-    await _persist(next);
+    await persist(next);
     unawaited(reportGameStart(SolitaireVariant.klondike, dailyChallenge: true));
   }
 
@@ -133,21 +114,16 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
     }
     _freeHintsRemaining = 3;
     _dailyRewardRetryUsed = true;
-    _undoBudget = 5;
-    _usedUndo = false;
+    resetSession();
     _drawCount = _drawCountFromSettings();
     final seed = klondikeDailySeed(_dailySessionYmd!);
     final next = _engine.newGame(drawCount: _drawCount, seed: seed);
-    _undo.clear();
-    _redo.clear();
     state = AsyncData(next);
-    await _persist(next);
+    await persist(next);
     unawaited(reportGameStart(SolitaireVariant.klondike, dailyChallenge: true));
   }
 
   void grantHintFromReward() => _freeHintsRemaining++;
-
-  void grantUndoFromReward() => _undoBudget++;
 
   /// Подсказка: бесплатные попытки или нужна реклама (`needsReward`).
   ({KlondikeHint? hint, bool needsReward, bool noMoves}) takeHintOrPrepareReward() {
@@ -162,99 +138,78 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
     }
     _freeHintsRemaining--;
     final board = state.asData!.value;
-    unawaited(_persist(board));
+    unawaited(persist(board));
     return (hint: h, needsReward: false, noMoves: false);
-  }
-
-  Future<void> undo() async {
-    final current = state.asData?.value;
-    if (current == null || _undo.isEmpty) return;
-    if (_undoBudget <= 0) return;
-    _undoBudget--;
-    _usedUndo = true;
-    final prev = _undo.removeLast();
-    _redo.add(current);
-    state = AsyncData(prev);
-    await _persist(prev);
-  }
-
-  Future<void> redo() async {
-    final current = state.asData?.value;
-    if (current == null || _redo.isEmpty) return;
-    final next = _redo.removeLast();
-    _undo.add(current);
-    state = AsyncData(next);
-    await _persist(next);
   }
 
   Future<void> draw() async {
     final current = state.asData?.value;
     if (current == null) return;
     final next = _engine.draw(current);
-    _apply(current, next);
+    applyMove(current, next);
   }
 
   Future<void> autoMoveWaste() async {
     final current = state.asData?.value;
     if (current == null) return;
     final next = _engine.autoMoveWaste(current);
-    _apply(current, next);
+    applyMove(current, next);
   }
 
   Future<void> autoMoveTableauTop(int columnIndex) async {
     final current = state.asData?.value;
     if (current == null) return;
     final next = _engine.autoMoveTableauTop(current, columnIndex);
-    _apply(current, next);
+    applyMove(current, next);
   }
 
   Future<void> moveWasteToTableau(int tableauIndex) async {
     final current = state.asData?.value;
     if (current == null) return;
     final next = _engine.moveWasteToTableau(current, tableauIndex);
-    _apply(current, next);
+    applyMove(current, next);
   }
 
   Future<void> moveWasteToFoundation() async {
     final current = state.asData?.value;
     if (current == null) return;
     final next = _engine.moveWasteToFoundation(current);
-    _apply(current, next);
+    applyMove(current, next);
   }
 
   Future<void> moveTableauTopToFoundation(int fromIndex) async {
     final current = state.asData?.value;
     if (current == null) return;
     final next = _engine.moveTableauTopToFoundation(current, fromIndex);
-    _apply(current, next);
+    applyMove(current, next);
   }
 
   Future<void> moveTableauTopToTableau(int fromIndex, int toIndex) async {
     final current = state.asData?.value;
     if (current == null) return;
     final next = _engine.moveTableauTopToTableau(current, fromIndex, toIndex);
-    _apply(current, next);
+    applyMove(current, next);
   }
 
   Future<void> moveTableauRunToTableau(int fromColumn, int fromCardIndex, int toColumn) async {
     final current = state.asData?.value;
     if (current == null) return;
     final next = _engine.moveTableauRunToTableau(current, fromColumn, fromCardIndex, toColumn);
-    _apply(current, next);
+    applyMove(current, next);
   }
 
   Future<void> moveFoundationToTableau(CardSuit suit, int tableauIndex) async {
     final current = state.asData?.value;
     if (current == null) return;
     final next = _engine.moveFoundationToTableau(current, suit, tableauIndex);
-    _apply(current, next);
+    applyMove(current, next);
   }
 
   Future<void> autoFinishStep() async {
     final current = state.asData?.value;
     if (current == null) return;
     final next = _engine.autoFinishStep(current);
-    _apply(current, next);
+    applyMove(current, next);
   }
 
   Future<void> autoFinishAll() async {
@@ -262,7 +217,7 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
     if (current == null) return;
     if (!_engine.canAutoFinish(current)) return;
     final next = _engine.autoFinishAll(current);
-    _apply(current, next);
+    applyMove(current, next);
   }
 
   bool canDragTableauRun(int fromColumn, int fromCardIndex) {
@@ -332,30 +287,32 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
     if (normalized == current.elapsedSeconds) return;
     final next = current.copyWith(elapsedSeconds: normalized);
     state = AsyncData(next);
-    await _persist(next);
+    await persist(next);
   }
 
-  void _apply(KlondikeState current, KlondikeState next) {
-    if (identical(next, current)) return;
-    _maybeRecordWin(current, next);
-    _undo.add(current);
-    _redo.clear();
-    state = AsyncData(next);
+  @override
+  void onMoveApplied(KlondikeState previous, KlondikeState next) {
+    _maybeRecordWin(previous, next);
+  }
+
+  @override
+  Future<void> saveState(KlondikeState value) {
     // Победа — партия закончена: сейв не храним, чтобы меню не предлагало «Продолжить».
-    unawaited(next.isWin ? _clearSavedGame() : _persist(next));
+    return value.isWin ? _clearSavedGame() : persist(value);
   }
 
   Future<void> _clearSavedGame() =>
       ref.read(localStoreProvider).clearSavedKlondike();
 
-  Future<void> _persist(KlondikeState value) async {
+  @override
+  Future<void> persist(KlondikeState value) async {
     await ref.read(localStoreProvider).saveKlondikeState(
           KlondikePersistence.toMap(
             value,
             dailyYmd: _dailySessionYmd,
             freeHintsRemaining: _freeHintsRemaining,
             dailyRewardRetryUsed: _dailyRewardRetryUsed,
-            undoBudget: _undoBudget,
+            undoBudget: undoBudgetRemaining,
           ),
         );
   }
@@ -372,7 +329,7 @@ class KlondikeController extends AsyncNotifier<KlondikeState> {
             dailyChallenge: day != null,
             moves: next.moves,
             elapsedSeconds: next.elapsedSeconds,
-            usedUndo: _usedUndo,
+            usedUndo: usedUndo,
           ),
     );
     if (day != null) {

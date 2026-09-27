@@ -10,6 +10,7 @@ import '../../core/l10n/app_strings.dart';
 import '../../core/models/app_settings.dart';
 import '../../core/providers.dart';
 import '../../core/models/card.dart';
+import '../../shared/widgets/hint_highlight.dart';
 import '../../shared/widgets/game_ui_common.dart';
 import '../../shared/widgets/legal_drop_glow.dart';
 import '../../shared/widgets/playing_card_view.dart';
@@ -85,25 +86,7 @@ class _SpiderScreenState extends ConsumerState<SpiderScreen>
     _dragFromIndex = null;
   }
 
-  Widget _hintYellowOverlay(Widget child) {
-    return Stack(
-      clipBehavior: Clip.none,
-      fit: StackFit.passthrough,
-      children: [
-        child,
-        Positioned.fill(
-          child: IgnorePointer(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: ColoredBox(
-                color: const Color(0xFFFFEB3B).withValues(alpha: 0.55),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  Widget _hintYellowOverlay(Widget child) => hintYellowOverlay(child);
 
   Widget _hintGlowSpider(String slotKey, Widget child) {
     if (!_hintKeys.contains(slotKey) || !_hintYellowOn) return child;

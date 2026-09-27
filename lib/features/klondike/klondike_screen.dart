@@ -8,6 +8,7 @@ import '../../core/app_table_background.dart';
 import '../../core/audio/sound_service.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/providers.dart';
+import '../../shared/widgets/hint_highlight.dart';
 import '../../shared/widgets/game_ui_common.dart';
 import '../../shared/widgets/legal_drop_glow.dart';
 import '../../shared/widgets/playing_card_view.dart';
@@ -118,25 +119,7 @@ class _KlondikeScreenState extends ConsumerState<KlondikeScreen> {
   }
 
   /// Жёлтая подложка для подсказки.
-  Widget _hintYellowOverlay(Widget child) {
-    return Stack(
-      clipBehavior: Clip.none,
-      fit: StackFit.passthrough,
-      children: [
-        child,
-        Positioned.fill(
-          child: IgnorePointer(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: ColoredBox(
-                color: const Color(0xFFFFEB3B).withValues(alpha: 0.55),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  Widget _hintYellowOverlay(Widget child) => hintYellowOverlay(child);
 
   /// Жёлтая вспышка по ключу слота (`hint_stock`, `hint_waste`, `hint_f:*`, `hint_t:*`, `hint_card:*`).
   Widget _hintGlow(String slotKey, Widget child) {
