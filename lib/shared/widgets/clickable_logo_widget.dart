@@ -47,15 +47,26 @@ class ClickableLogoWidget extends StatelessWidget {
               alignment: Alignment.center,
               clipBehavior: Clip.none,
               children: [
-                // Белое свечение по форме логотипа: размытый белый силуэт
-                // под основным изображением — читается на тёмном сукне.
+                // Белое свечение по форме логотипа: два слоя размытого
+                // белого силуэта — плотный у контура и мягкий по краям.
                 ImageFiltered(
-                  imageFilter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                  imageFilter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                   child: Image.asset(
                     logoAsset,
                     height: height,
                     fit: BoxFit.contain,
-                    color: Colors.white.withValues(alpha: 0.9),
+                    color: Colors.white.withValues(alpha: 0.85),
+                    colorBlendMode: BlendMode.srcIn,
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                  ),
+                ),
+                ImageFiltered(
+                  imageFilter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                  child: Image.asset(
+                    logoAsset,
+                    height: height,
+                    fit: BoxFit.contain,
+                    color: Colors.white,
                     colorBlendMode: BlendMode.srcIn,
                     errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
