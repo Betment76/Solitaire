@@ -212,6 +212,363 @@ Três jogos em um só download. Distribua sua primeira mão hoje!
 
 ---
 
+
+---
+
+## FR
+
+**Заголовок (23/30):** `Mes Solitaires : 3 en 1`
+
+**Краткое (69/80):**
+```
+Klondike, Spider et FreeCell hors ligne. Défis quotidiens, indices, annulation.
+```
+
+**Полное:**
+```
+Trois jeux de solitaire classiques dans une application gratuite — hors ligne, à tout moment.
+
+🃏 KLONDIKE — le jeu de cartes le plus célèbre. Piochez 1 ou 3 cartes, utilisez
+indices, annulation et terminaison automatique pour vider les quatre fondations.
+🕷️ SPIDER — construisez des suites du roi à l'as en une, deux ou quatre couleurs.
+♣️ FREECELL — chaque donne est résoluble. Anticipez et utilisez les cellules libres.
+
+POURQUOI VOUS ALLEZ AIMIER
+• 100 % hors ligne — jouez sans internet
+• Défis quotidiens : une nouvelle donne chaque jour avec vos records
+• Indices intelligents, annulation illimitée, finition automatique
+• Succès, dos de cartes et thèmes de table à débloquer
+• Cartes nettes et lisibles sur téléphone et tablette
+
+DÉFI QUOTIDIEN
+Chaque jour, une donne fixe pour tous. Terminez-la en moins de coups ou moins
+de temps : votre record est enregistré. Une raison de revenir chaque jour.
+
+DÉTENTE, SANS PRESSION
+Gratuit avec publicité : une petite bannière, une annonce à l'ouverture et des
+annonces récompensées facultatives. Aucune vidéo forcée entre les coups.
+
+Trois jeux en un seul téléchargement. Distribuez votre première main aujourd'hui !
+```
+
+---
+
+## IT
+
+**Заголовок (23/30):** `I Miei Solitari: 3 in 1`
+
+**Краткое (70/80):**
+```
+Klondike, Spider e FreeCell offline. Sfide giornaliere, suggerimenti, undo.
+```
+
+**Полное:**
+```
+Tre classici giochi di solitario in un'unica app gratuita — offline, sempre.
+
+🃏 KLONDIKE — il gioco di carte più famoso del mondo. Pesca 1 o 3 carte, usa
+suggerimenti, annulla e completamento automatico per vuotare le quattro basi.
+🕷️ SPIDER — costruisci sequenze dal re all'asso in uno, due o quattro semi.
+♣️ FREECELL — ogni partita è risolvibile. Pianifica e usa bene le celle libere.
+
+PERCHÉ TI PIACERÀ
+• 100% offline — gioca senza internet
+• Sfide giornaliere: una nuova mano ogni giorno con i tuoi record
+• Suggerimenti intelligenti, annullamento illimitato, completamento automatico
+• Obiettivi e retro delle carte e temi del tavolo sbloccabili
+• Carte nitide e leggibili su telefono e tablet
+
+SFIDA GIORNALIERA
+Ogni giorno una distribuzione fissa per tutti. Vincila in meno mosse o meno
+tempo: il tuo record viene salvato. Un motivo per tornare ogni giorno.
+
+RILASSANTE, SENZA PRESSIONE
+Gratis con pubblicità: un piccolo banner, un annuncio all'apertura e pubblicità
+con premi opzionali per suggerimenti o annullamenti extra. Nessun video forzato
+tra le mosse.
+
+Tre giochi in un solo download. Distribuisci la tua prima mano oggi!
+```
+
+---
+
+## TR
+
+**Заголовок (27/30):** `Solitaire: 3 Oyun Bir Arada`
+
+**Краткое (72/80):**
+```
+Klondike, Spider ve FreeCell çevrimdışı. Günlük görevler, ipuçları, geri al.
+```
+
+**Полное:**
+```
+Üç klasik solitaire oyunu tek ücretsiz uygulamada — çevrimdışı, her zaman.
+
+🃏 KLONDIKE — dünyanın en bilinen kart oyunu. 1 veya 3 kart açın, ipuçları,
+geri alma ve otomatik tamamlama ile dört temeli de boşaltın.
+🕷️ SPIDER — kartları birden dört renkte papazdan asa dizin.
+♣️ FREECELL — her dağıtımın çözümü var. Önceden planlayın, boş hücreleri akıllı kullanın.
+
+NEDEN BEĞENECEKSİNİZ
+• %100 çevrimdışı — internet olmadan oynayın
+• Günlük görevler: her gün yeni bir dağıtım, kendi rekorlarınız
+• Akıllı ipuçları, sınırsız geri alma, otomatik tamamlama
+• Başarımlar, açılabilir kart arka yüzleri ve masa temaları
+• Telefon ve tablette net, okunabilir kartlar
+
+GÜNLÜK GÖREV
+Her gün herkes için aynı dağıtım. Daha az hamlede veya daha hızlı bitirin —
+rekorunuz kaydedilir. Her gün geri dönmek için bir sebep.
+
+RAHAT, BASKISIZ
+Reklamlarla ücretsiz: küçük bir banner, açılışta bir reklam ve isterseniz ekstra
+ipucu/geri alma için ödüllü reklam. Hamleler arasında zorunlu video yok.
+
+Tek indirmede üç oyun. İlk eli bugün dağıtın!
+```
+
+---
+
+## JA
+
+**Заголовок (10/30):** `ソリティア3ゲーム集`
+
+**Краткое (48/80):**
+```
+クロンダイク・スパイダー・フリーセル。オフラインで毎日のチャレンジ。
+```
+
+**Полное:**
+```
+定番のソリティア3ゲームがこの1つの無料アプリに — オフラインでいつでも遊べます。
+
+🃏 クロンダイク — 世界で一番愛されているカードゲーム。1枚引き／3枚引きを選べて、
+ヒント・undo（取り消し）・自動仕上げで4つの組札をすべて空に。
+🕷️ スパイダー — スート1〜4種類でキングからエースへ積み上げます。
+♣️ フリーセル — 全ての配牌に解あり。先を読んでフリーセルを賢く使いましょう。
+
+MY SOLITAIRES の特徴
+• 100%オフライン — インターネット不要
+• デイリーチャレンジ — 毎日新しい配牌とあなたの記録
+• 賢いヒント、無制限のundo、自動仕上げ
+• 実績とカードの裏面・テーブルテーマの解放
+• スマホでもタブレットでも読みやすいカード
+
+デイリーチャレンジ
+毎日1つの固定された配牌を全員に。少ない手数や短い時間でクリアすると記録が保存されます。
+
+広告は控えめ：小さなバナー、起動時の1回、そしてヒントやundo追加などの
+任意のリワード広告のみ。手の間に強制動画はありません。
+
+3つのゲームを1つのダウンロードで。今日から最初の1枚を！
+```
+
+---
+
+## KO
+
+**Заголовок (13/30):** `솔리테어 3게임 모음`
+
+**Краткое (52/80):**
+```
+클론다이크, 스파이더, 프리셀. 오프라인 일일 챌린지, 힌트, 실행 취소.
+```
+
+**Полное:**
+```
+클래식 솔리테어 3게임이 무료 앱 하나에 — 오프라인으로 언제든 즐기세요.
+
+🃏 클론다이크 — 세계에서 가장 사랑받는 카드게임. 1장 또는 3장씩 뽑고, 힌트와
+실행 취소, 자동 정리로 네 개의 기둥을 모두 비워 보세요.
+🕷️ 스파이더 — 1~4개의 문양으로 king부터 ace까지 쌓아 올리세요.
+♣️ 프리셀 — 모든 배패는 풀 수 있습니다. 미리 계획하고 프리셀을 현명하게 사용하세요.
+
+MY SOLITAIRES의 특징
+• 100% 오프라인 — 인터넷 없이 플레이
+• 일일 챌린지 — 매일 새로운 배패와 개인 기록
+• 똑똑한 힌트, 무제한 실행 취소, 자동 정리
+• 업적과 카드 뒷면·테이블 테마 해금
+• 휴대폰과 태블릿에서 선명하고 읽기 쉬운 카드
+
+일일 챌린지
+매일 모두에게 동일한 배패가 주어집니다. 더 적은 수나 더 빠른 시간으로 클리어하면
+기록이 저장됩니다. 매일 돌아올 이유가 됩니다.
+
+광고는 절제되게: 작은 배너, 앱 실행 시 1회, 그리고 힌트·실행 취소 추가 등을 위한
+선택형 보상 광고뿐입니다. 수 사이에 강제 동영상은 없습니다.
+
+다운로드 한 번으로 세 게임. 오늘 첫 카드를 펼쳐 보세요!
+```
+
+---
+
+## PL
+
+**Заголовок (20/30):** `Moje Pasjanse: 3 w 1`
+
+**Краткое (72/80):**
+```
+Klondike, Spider i FreeCell offline. Codzienne wyzwania, podpowiedzi, undo.
+```
+
+**Полное:**
+```
+Trzy klasyczne pasjanse w jednej darmowej aplikacji — offline, o każdej porze.
+
+🃏 KLONDIKE — najsłynniejsza gra karciana świata. Dobieraj 1 lub 3 karty,
+korzystaj z podpowiedzi, cofania i automatycznego układania.
+🕷️ SPIDER — układaj karty od króla do asa w jednym, dwóch lub czterech kolorach.
+♣️ FREECELL — każde rozdanie ma rozwiązanie. Planuj i mądrze używaj wolnych pól.
+
+DLACZEGO MY SOLITAIRES?
+• 100% offline — graj bez internetu
+• Codzienne wyzwania: nowe rozdanie każdego dnia i Twoje rekordy
+• Inteligentne podpowiedzi, nieograniczone cofanie, auto-układanie
+• Osiągnięcia oraz odblokowywane rewersy kart i motywy stołu
+• Czytelne karty na telefonie i tablecie
+
+CODZIENNE WYZWANIE
+Codziennie to samo rozdanie dla wszystkich. Ukończ je w mniejszej liczbie
+ruchów lub szybciej — rekord zostaje zapisany. Powód, by wracać każdego dnia.
+
+SPOKOJNIE, BEZ PRESJI
+Darmowa gra z reklamami: mały baner, jedna reklama przy otwarciu i opcjonalne
+reklamy za nagrody — dodatkowe podpowiedzi czy cofnięcia. Żadnych wymuszonych
+filmów między ruchami.
+
+Trzy gry w jednym pobraniu. Rozdaj pierwsze karty już dziś!
+```
+
+---
+
+## NL
+
+**Заголовок (21/30):** `Mijn Patience: 3 in 1`
+
+**Краткое (71/80):**
+```
+Klondike, Spider en FreeCell offline. Dagelijkse uitdagingen, hints, undo.
+```
+
+**Полное:**
+```
+Drie klassieke patience-spellen in één gratis app — offline, altijd en overal.
+
+🃏 KLONDIKE — het beroemdste kaartspel ter wereld. Pak 1 of 3 kaarten, gebruik
+hints, ongedaan maken en automatisch afmaken om alle vier de fundamenten te legen.
+🕷️ SPIDER — bouw reeksen van heer naar aas in één, twee of vier kleuren.
+♣️ FREECELL — elke deling is oplosbaar. Plan vooruit en gebruik de vrije cellen slim.
+
+WAAROM MY SOLITAIRES?
+• 100% offline — speel zonder internet
+• Dagelijkse uitdagingen: elke dag een nieuwe deling met je eigen records
+• Slimme hints, onbeperkt ongedaan maken, automatisch afmaken
+• Prestaties en ontgrendelbare kaartruggen en tafelthema's
+• Heldere, leesbare kaarten op telefoon en tablet
+
+DAGELIJKSE UITDAGING
+Elke dag dezelfde deling voor iedereen. Maak hem af in minder zetten of minder
+tijd: je record wordt opgeslagen. Een reden om elke dag terug te komen.
+
+RUSTIG, ZONDER DRUK
+Gratis met advertenties: een kleine banner, één advertentie bij het openen en
+optionele beloningsadvertenties voor extra hints of stappen. Geen geforceerde
+video's tussen de zetten door.
+
+Drie spellen in één download. Deel vandaag je eerste hand uit!
+```
+
+---
+
+## UK
+
+**Заголовок (19/30):** `Мої пасьянси: 3 в 1`
+
+**Краткое (70/80):**
+```
+Косинка, Павук і Вільна комірка без інтернету. Щоденні завдання та рекорди.
+```
+
+**Полное:**
+```
+Три класичні пасьянси в одному безкоштовному застосунку — офлайн, будь-коли.
+
+🃏 КОСИНКА — улюблена карткова гра мільйонів. Роздача по 1 або по 3, підказки,
+скасування та автозбір усіх чотирьох домів.
+🕷️ ПАВУК — збирайте карти від короля до туза в одній, двох або чотирьох мастях.
+♣️ ВІЛЬНА КОМІРКА — кожна роздача розв'язувана. Плануйте та розумно використовуйте комірки.
+
+ЧОМУ ВАРТО СПРОБУВАТИ
+• 100% офлайн — грайте без інтернету
+• Щоденні завдання: нова роздача щодня та ваші особисті рекорди
+• Розумні підказки, необмежене скасування й автозбір
+• Досягнення та картки, що відкриваються: рубашки і фони столу
+• Чисті, добре читабельні карти на телефоні та планшеті
+
+ЩОДЕННЕ ЗАВДАННЯ
+Щодня — одна фіксована роздача для всіх. Пройдіть її за меншу кількість ходів
+або швидше — рекорд збережеться. Привід повертатися щодня.
+
+СПОКІЙНО, БЕЗ НАВ'ЯЗУВАННЯ
+Гра безкоштовна з рекламою: невеликий банер, одна реклама під час відкриття
+та необов'язкова реклама за бонуси. Ніяких примусових відео між ходами.
+
+Три гри — одне застосування. Роздайте першу карту вже сьогодні!
+```
+
+---
+
+## ID
+
+**Заголовок (18/30):** `Solitaire: 3 Game Seru`
+
+**Краткое (70/80):**
+```
+Klondike, Spider, dan FreeCell offline. Tantangan harian, petunjuk, undo.
+```
+
+**Полное:**
+```
+Tiga game solitaire klasik dalam satu aplikasi gratis — offline, kapan saja.
+
+🃏 KLONDIKE — game kartu paling populer di dunia. Ambil 1 atau 3 kartu, gunakan
+petunjuk, undo, dan penyelesaian otomatis untuk mengosongkan empat fondasi.
+🕷️ SPIDER — susun kartu dari king ke as dalam satu, dua, atau empat suit.
+♣️ FREECELL — setiap pembagian bisa diselesaikan. Rencanakan dan gunakan sel kosong dengan cerdas.
+
+KENAPA MY SOLITAIRES?
+• 100% offline — main tanpa internet
+• Tantangan harian: pembagian baru setiap hari dengan rekor pribadimu
+• Petunjuk cerdas, undo tanpa batas, penyelesaian otomatis
+• Pencapaian serta belakang kartu dan tema meja yang bisa dibuka
+• Kartu jelas dan mudah dibaca di ponsel maupun tablet
+
+TANTANGAN HARIAN
+Setiap hari ada satu pembagian tetap untuk semua orang. Selesaikan dengan
+lebih sedikit langkah atau lebih cepat — rekormu tersimpan. Alasan kembali setiap hari.
+
+SANTAI, TANPA TEKANAN
+Gratis dengan iklan: banner kecil, satu iklan saat membuka game, dan iklan
+berhadiah opsional untuk petunjuk atau undo tambahan. Tidak ada video paksa
+di antara langkah.
+
+Tiga game dalam satu unduhan. Bagikan kartu pertamamu hari ini!
+```
+
+---
+
+## Ещё больше языков — тактика
+
+Остаток локалей Play (**HI, CS, RO, HU, EL, VI, TH, AR, ZH-TW, ES-419**) двумя путями:
+1. **ИИ-импорт в консоли** (кнопка «Импортируйте переводы с помощью ИИ») — машинный
+перевод с русского/английского; для хвостовых языков качества достаточно, ключи —
+это в основном транслитерация названий игр.
+2. Либо скажите — допишу руками в этот же файл.
+
+
+---
+
 ## Ключевые слова по языкам (для самопроверки текстов)
 
 | Язык | Основные запросы |
