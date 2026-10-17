@@ -3,8 +3,13 @@ import 'package:yandex_mobileads/mobile_ads.dart';
 
 /// Реклама с вознаграждением (Yandex Mobile Ads SDK 8).
 /// Общий блок (автофиниш, FreeCell, ежедневная вторая попытка и т.д.).
+/// Дефолт — боевой блок rustore-приложения в РСЯ (схема как в googleplay.json:
+/// −3 = отмены/общий).
 const String _kRewardedEnv =
-    String.fromEnvironment('YANDEX_REWARDED_AD_UNIT_ID');
+    String.fromEnvironment(
+      'YANDEX_REWARDED_AD_UNIT_ID',
+      defaultValue: 'R-M-19262021-3',
+    );
 
 /// Подсказка в Косынке — переопределение: `--dart-define=YANDEX_REWARDED_KLONDIKE_HINT_ID=...`
 const String _kKlondikeHintId = String.fromEnvironment(
@@ -24,10 +29,10 @@ const String _kSpiderUndoId = String.fromEnvironment(
   defaultValue: 'R-M-19262021-3',
 );
 
-/// Подсказка в Пауке — если пусто, используется общий [YANDEX_REWARDED_AD_UNIT_ID].
+/// Подсказка в Пауке — дефолт R-M-19262021-2 (−2 = подсказки, как в Косынке).
 const String _kSpiderHintId = String.fromEnvironment(
   'YANDEX_REWARDED_SPIDER_HINT_ID',
-  defaultValue: '',
+  defaultValue: 'R-M-19262021-2',
 );
 
 /// Отмена в FreeCell — `--dart-define=YANDEX_REWARDED_FREECELL_UNDO_ID=...`
