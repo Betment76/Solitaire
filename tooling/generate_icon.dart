@@ -103,7 +103,7 @@ void main() {
   }
 
   // Create output directory
-  final dir = Directory('F:/Programs/AndroidStudioProject/solitaire/assets/icon');
+  final dir = Directory('F:/Project_RuStore/solitaire/assets/icon');
   if (!dir.existsSync()) dir.createSync(recursive: true);
 
   // Write 1024x1024 source
@@ -123,7 +123,7 @@ void main() {
 
   for (final entry in sizes.entries) {
     final resized = img.copyResize(image, width: entry.value, height: entry.value);
-    final targetDir = Directory('F:/Programs/AndroidStudioProject/solitaire/android/app/src/main/res/${entry.key}');
+    final targetDir = Directory('F:/Project_RuStore/solitaire/android/app/src/main/res/${entry.key}');
     if (!targetDir.existsSync()) targetDir.createSync(recursive: true);
     final targetPath = '${targetDir.path}/ic_launcher.png';
     File(targetPath).writeAsBytesSync(img.encodePng(resized));

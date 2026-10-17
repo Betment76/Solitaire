@@ -16,7 +16,7 @@ total_lf = 0
 total_lh = 0
 for path, d in sorted(files.items(), key=lambda x: x[1]['lh'] / max(x[1]['lf'], 1)):
     cov = d['lh'] / max(d['lf'], 1) * 100
-    short = path.replace('F:\\Programs\\AndroidStudioProject\\solitaire\\', '')
+    short = path.replace('F:\\Project_RuStore\\solitaire\\', '')
     print(f'{cov:5.1f}% {d["lh"]:4d}/{d["lf"]:4d}  {short}')
     total_lf += d['lf']
     total_lh += d['lh']
